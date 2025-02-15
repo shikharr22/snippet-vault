@@ -6,6 +6,7 @@ export interface IFolder extends Document {
   title: string;
   createdAt: Date;
   createdBy: string;
+  snippetIds: string[];
   totalSnippets: number;
 }
 
@@ -15,6 +16,7 @@ const SnippetSchema = new Schema<IFolder>({
   title: { type: String, required: true },
   createdAt: { type: Date, required: true },
   createdBy: { type: String, required: true },
+  snippetIds: { type: [String], required: true },
   totalSnippets: { type: Number, required: true },
 });
 

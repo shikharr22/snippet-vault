@@ -2,55 +2,55 @@
 import FolderCard from "@/components/FolderCard";
 import SnippetCard from "@/components/SnippetCard";
 import { IFolder } from "@/models/Folder";
+import { ISnippet } from "@/models/Snippet";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 
 export default function DashboardPage() {
+  /**Folders state */
   const [folders, setFolders] = useState([] as IFolder[]);
-  const [folderLoading, setFolderLoading] = useState(false);
+  const [isFoldersLoading, setisFoldersLoading] = useState(false);
+
+  /**Snippets state */
+  const [snippets, setSnippets] = useState([] as ISnippet[]);
+  const [isSnippetsLoading, setisSnippetsLoading] = useState(false);
 
   useEffect(() => {
-    const fetchSnippets = async () => {
-      setFolderLoading(true);
+    /**fetch folders */
+    const fetchFolders = async () => {
+      setisFoldersLoading(true);
       try {
         const res = await fetch("api/folders");
         const data = await res.json();
-
-        await new Promise((resolve) => setTimeout(resolve, 5000));
 
         setFolders(data);
       } catch (error) {
         console.error("Error fetching snippets:", error);
       } finally {
-        setFolderLoading(false);
+        setisFoldersLoading(false);
       }
     };
 
+    /**fetch snippets */
+    const fetchSnippets = async () => {
+      setisSnippetsLoading(true);
+      try {
+        const res = await fetch("api/snippets?limit=3");
+        const data = await res.json();
+
+        setSnippets(data);
+      } catch (error) {
+        console.error("Error fetching snippets:", error);
+      } finally {
+        setisSnippetsLoading(false);
+      }
+    };
+
+    fetchFolders();
     fetchSnippets();
   }, []);
-
-  const mockRecentSnippets = [
-    {
-      id: "1",
-      title: "Snippet title 1",
-      description: "Snippet description 1",
-      tag: "Javascript",
-    },
-    {
-      id: "2",
-      title: "Snippet title 2",
-      description: "Snippet description 2",
-      tag: "React",
-    },
-    {
-      id: "3",
-      title: "Snippet title 1",
-      description: "Snippet description 1",
-      tag: "Javascript",
-    },
-  ];
 
   return (
     <div className="p-4 max-w-xl mx-auto ">
@@ -63,7 +63,7 @@ export default function DashboardPage() {
       </div>
       <div className="flex gap-4 overflow-x-auto scrollbar-hide whitespace-nowrap">
         {/* Folder cards */}
-        {folderLoading
+        {isFoldersLoading
           ? Array(4)
               .fill(null)
               .map((_, i) => (
@@ -96,9 +96,27 @@ export default function DashboardPage() {
       "
       >
         {/* Recent snippet cards */}
-        {mockRecentSnippets?.map((snippet) => (
-          <SnippetCard key={snippet?.id} {...snippet} />
-        ))}
+        {isSnippetsLoading
+          ? Array(3)
+              .fill(null)
+              .map((_, i) => (
+                <div
+                  key={i}
+                  className="flex flex-col justify-between p-3 w-full h-24 bg-white rounded-lg shrink-0s"
+                >
+                  <Skeleton width="100%" height="100%" />
+                </div>
+              ))
+          : snippets?.map((snippet: ISnippet) => (
+              <SnippetCard
+                key={snippet?.snippetId}
+                id={snippet?.snippetId}
+                title={snippet?.title}
+                description={snippet?.description}
+                createdAt={snippet?.createdAt}
+                tag={snippet?.tag}
+              />
+            ))}
       </div>
     </div>
   );

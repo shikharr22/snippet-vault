@@ -4,7 +4,9 @@ import mongoose, { Document, Model, Schema } from "mongoose";
 export interface ISnippet extends Document {
   snippetId: string;
   title: string;
+  description: string;
   code: string;
+  tag: string;
   createdAt: Date;
   createdBy: string;
   parentFolderId: string;
@@ -14,7 +16,9 @@ export interface ISnippet extends Document {
 const SnippetSchema = new Schema<ISnippet>({
   snippetId: { type: String, required: true },
   title: { type: String, required: true },
+  description: { type: String, required: true },
   code: { type: String, required: true },
+  tag: { type: String, required: true },
   createdAt: { type: Date, required: true },
   createdBy: { type: String, required: true },
   parentFolderId: { type: String, required: true },
