@@ -1,4 +1,5 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
+import * as z from "zod";
 
 /**interface for basic snippet */
 export interface ISnippet extends Document {
@@ -6,7 +7,7 @@ export interface ISnippet extends Document {
   title: string;
   description: string;
   code: string;
-  tag: string;
+  tags: string[];
   createdAt: Date;
   createdBy: string;
   parentFolderId: string;
@@ -18,7 +19,7 @@ const SnippetSchema = new Schema<ISnippet>({
   title: { type: String, required: true },
   description: { type: String, required: true },
   code: { type: String, required: true },
-  tag: { type: String, required: true },
+  tags: { type: [String], required: true },
   createdAt: { type: Date, required: true },
   createdBy: { type: String, required: true },
   parentFolderId: { type: String, required: true },
@@ -27,5 +28,12 @@ const SnippetSchema = new Schema<ISnippet>({
 /**check if this Snippet model exists right now or not */
 const Snippet: Model<ISnippet> =
   mongoose.models.Snippet || mongoose.model<ISnippet>("Snippet", SnippetSchema);
+
+export const newSnippetSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().optional(),
+  code: z.string().min(1, "Code is required"),
+  tags: z.array(z.string().min(0)),
+});
 
 export default Snippet;

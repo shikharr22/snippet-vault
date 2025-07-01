@@ -22,7 +22,7 @@ export default function BottomNavbar() {
       <div className="relative -mt-6">
         <button
           className="bg-blue-600 text-white p-4 rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700 transition"
-          onClick={() => router.push("/add-snippet")}
+          onClick={() => router.push("/add-new-snippet")}
         >
           <Plus size={28} />
         </button>

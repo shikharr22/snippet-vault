@@ -114,7 +114,7 @@ export default function DashboardPage() {
                 title={snippet?.title}
                 description={snippet?.description}
                 createdAt={snippet?.createdAt}
-                tag={snippet?.tag}
+                tags={snippet?.tags}
               />
             ))}
       </div>

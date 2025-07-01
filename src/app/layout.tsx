@@ -15,12 +15,13 @@ export default function RootLayout({
     login: { label: "Login ", showBackButton: true },
     signup: { label: "Sign up", showBackButton: true },
     dashboard: { label: "Dashboard ", showBackButton: false },
-    "add-snippet": { label: "Add Snippet ", showBackButton: true },
+    "add-new-snippet": { label: "Add new snippet ", showBackButton: true },
+    snippet: { label: "Snippet", showBackButton: true },
   };
 
   /**get the page name from URL*/
   const pathname = usePathname();
-  const currentPage = (pathname.split("/").pop() || "") as string;
+  const currentPage = (pathname.split("/")[1] || "") as string;
 
   return (
     <html lang="en">
