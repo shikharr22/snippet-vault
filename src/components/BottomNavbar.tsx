@@ -1,22 +1,38 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Home, History, Folder, Settings, Plus } from "lucide-react";
 
 export default function BottomNavbar() {
   const router = useRouter();
+  const pathname = usePathname();
 
   return (
     <nav className="fixed bottom-0 left-0 w-full bg-white shadow-lg border-t flex justify-around items-center py-3 sm:py-4">
       <NavItem
-        icon={<Home size={24} />}
+        icon={
+          <Home
+            size={24}
+            className={
+              pathname === "/dashboard" ? "text-blue-600 font-medium" : ""
+            }
+          />
+        }
         label="Home"
-        active
+        active={pathname === "/dashboard"}
         onClick={() => router.push("/dashboard")}
       />
       <NavItem
-        icon={<History size={24} />}
-        label="Recent"
-        onClick={() => router.push("/recent")}
+        icon={
+          <History
+            size={24}
+            className={
+              pathname === "/snippets" ? "text-blue-600 font-medium" : ""
+            }
+          />
+        }
+        label="All snippets"
+        active={pathname === "/snippets"}
+        onClick={() => router.push("/snippets")}
       />
 
       <div className="relative -mt-6">
@@ -29,14 +45,17 @@ export default function BottomNavbar() {
       </div>
 
       <NavItem
-        icon={<Folder size={24} />}
+        icon={
+          <Folder
+            size={24}
+            className={
+              pathname === "/folders" ? "text-blue-600 font-medium" : ""
+            }
+          />
+        }
         label="Folders"
+        active={pathname === "/folders"}
         onClick={() => router.push("/folders")}
-      />
-      <NavItem
-        icon={<Settings size={24} />}
-        label="Settings"
-        onClick={() => router.push("/settings")}
       />
     </nav>
   );
@@ -61,8 +80,10 @@ function NavItem({
       }`}
       onClick={onClick}
     >
-      {icon}
-      <span className="text-xs mt-1">{label}</span>
+      <span className={active ? "text-blue-600" : ""}>{icon}</span>
+      <span className={active ? "text-blue-600 text-xs mt-1" : "text-xs mt-1"}>
+        {label}
+      </span>
     </button>
   );
 }

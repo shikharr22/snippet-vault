@@ -17,6 +17,9 @@ export default function RootLayout({
     dashboard: { label: "Dashboard ", showBackButton: false },
     "add-new-snippet": { label: "Add new snippet ", showBackButton: true },
     snippet: { label: "Snippet", showBackButton: true },
+    folder: { label: "Folder", showBackButton: true },
+    snippets: { label: "Snippets", showBackButton: true },
+    folders: { label: "Folders", showBackButton: true },
   };
 
   /**get the page name from URL*/

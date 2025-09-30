@@ -1,25 +1,33 @@
 "use client";
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
+import { apiPost } from "@/lib/utils";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
     rememberMe: false,
   });
+
+  const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prevData) => ({
       ...prevData,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === "checkbox" ? checked : value?.trim(),
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission logic here
-    console.log("Form Data:", formData);
+    try {
+      await apiPost("/api/login", formData);
+      router.push("/dashboard");
+    } catch (error: any) {
+      alert(error?.message || "Login failed");
+    }
   };
 
   return (
@@ -30,18 +38,18 @@ export default function LoginPage() {
       <form className="mt-10 mb-10" onSubmit={handleSubmit}>
         <div className="mb-4">
           <label
-            htmlFor="email"
+            htmlFor="username"
             className="block text-sm font-medium text-gray-700"
           >
-            Email
+            Username
           </label>
           <input
-            type="email"
-            id="email"
-            name="email"
-            placeholder="Email"
+            type="string"
+            id="username"
+            name="username"
+            placeholder="Username"
             required
-            value={formData?.email}
+            value={formData?.username}
             onChange={handleChange}
             className="w-full p-2 border border-gray-300 rounded"
           />

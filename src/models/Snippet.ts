@@ -34,6 +34,7 @@ export const newSnippetSchema = z.object({
   description: z.string().optional(),
   code: z.string().min(1, "Code is required"),
   tags: z.array(z.string().min(0)),
+  parentFolderId: z.string(),
 });
 
 export default Snippet;

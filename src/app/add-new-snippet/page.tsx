@@ -1,5 +1,6 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { apiPost, apiGet } from "@/lib/utils";
 
 import { Plus, X } from "lucide-react";
 import { Textarea } from "@/components/Textarea";
@@ -7,6 +8,8 @@ import { Button } from "@/components/Button";
 import { InputField } from "@/components/InputField";
 import * as z from "zod";
 import { newSnippetSchema } from "@/models/Snippet";
+import { IFolder } from "@/models/Folder";
+import { useRouter } from "next/navigation";
 
 type INewSnippet = z.infer<typeof newSnippetSchema>;
 
@@ -16,10 +19,12 @@ export default function SnippetForm() {
     description: "",
     code: "",
     tags: [],
+    parentFolderId: "",
   } as INewSnippet);
   const [showTagsInput, setShowTagsInput] = useState(false);
   const [tagInput, setTagInput] = useState("");
-  // const [errors, setErrors] = useState<Record<string, string>>({});
+  const [foldersList, setFoldersList] = useState<IFolder[]>([] as IFolder[]);
+  const router = useRouter();
 
   /**method to add tags */
   const addTag = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -57,21 +62,26 @@ export default function SnippetForm() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const res = await fetch("/api/add-new-snippet", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
-      if (res?.ok) {
-        const data = await res?.json;
-        console.log("Snippet saved successfully", data);
-      }
+      const data = await apiPost("/api/add-new-snippet", form);
+      console.log("Snippet saved successfully", data);
+      router.push("/dashboard");
     } catch (error) {
       console.error("Error saving snippet", error);
     }
   };
+
+  const fetchFoldersList = async () => {
+    try {
+      const data = await apiGet("/api/folders");
+      setFoldersList(data);
+    } catch (error) {
+      console.error("Something went wrong", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchFoldersList();
+  }, []);
 
   return (
     <form className="max-w-md mx-auto  p-4" onSubmit={handleSubmit}>
@@ -156,18 +166,32 @@ export default function SnippetForm() {
           </Button>
         </div>
       </div>
+      <div className="mb-3">
+        <label className="text-sm font-medium">Parent folder</label>
+
+        <select
+          name="folder"
+          value={form?.parentFolderId}
+          onChange={(e) =>
+            setForm((prev) => ({ ...prev, parentFolderId: e.target.value }))
+          }
+          className="mt-1 px-2 py-1 border rounded w-full"
+        >
+          <option key="" value="">
+            Select folder
+          </option>
+          {foldersList?.map((folder) => (
+            <option key={folder?.folderId} value={folder?.folderId}>
+              {folder?.title}
+            </option>
+          ))}
+          {/* Add more folder options as needed */}
+        </select>
+      </div>
       {/* Save button */}
       <Button type="submit" className="bg-blue-500 text-white">
         Save
       </Button>
-
-      {/* Folder */}
-      {/* <Card className="mt-3">
-        <CardContent className="p-3 flex items-center gap-2">
-          <Folder size={18} />
-          <span className="text-sm">JavaScript</span>
-        </CardContent>
-      </Card> */}
     </form>
   );
 }

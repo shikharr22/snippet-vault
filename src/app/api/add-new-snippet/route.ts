@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { newSnippetSchema } from "@/models/Snippet";
+import { verifyAccessCookies } from "@/lib/utils";
 
 export async function POST(req: NextRequest) {
   try {
+    const isAuthenticated = verifyAccessCookies(req);
+
+    if (!isAuthenticated) {
+      return NextResponse.json(
+        { message: "User not authenticated" },
+        { status: 401 }
+      );
+    }
+
     const client = await clientPromise;
     const db = client.db("snippet_vault_db");
 
@@ -18,12 +28,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const newSnippet = { ...reqPayload, createdAt: new Date() };
+    const newSnippet = {
+      ...reqPayload,
+      createdAt: new Date(),
+    };
 
     const result = await db.collection("Snippets").insertOne(newSnippet);
 
+    await db
+      .collection("Snippets")
+      .updateOne(
+        { _id: result.insertedId },
+        { $set: { snippetId: result.insertedId?.toString() } }
+      );
+
+    await db.collection("Folders").updateOne(
+      { folderId: reqPayload?.parentFolderId },
+      {
+        $addToSet: { snippetIds: result.insertedId?.toString() },
+        $inc: { totalSnippets: 1 },
+      }
+    );
+
     return NextResponse.json(
-      { message: "Snippet added successfully", snippetId: result?.insertedId },
+      { message: "Snippet added successfully" },
       { status: 201 }
     );
   } catch (error) {
