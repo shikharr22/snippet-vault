@@ -1,21 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { verifyAccessCookies } from "@/lib/utils";
+import { cacheDel, getDb, requireAuth, withCacheLock } from "@/lib/infra";
 
 export async function GET(req: NextRequest) {
   try {
-    const isAuthenticated = verifyAccessCookies(req);
+    const user: any = requireAuth(req);
+    const userId = user && user?.userId;
 
-    if (!isAuthenticated) {
-      return NextResponse.json(
-        { message: "User not authenticated" },
-        { status: 401 }
-      );
-    }
-    const client = await clientPromise;
-    const db = client.db("snippet_vault_db");
+    const db = await getDb();
 
-    const folders = await db.collection("Folders").find({}).toArray();
+    const cacheKey = `folders_list:owner:${userId}:all`;
+
+    const folders = await withCacheLock(
+      cacheKey,
+      async () => {
+        let res = await db.collection("Folders").find().toArray();
+        return res;
+      },
+
+      { ttlSeconds: 60 }
+    );
 
     return NextResponse.json(folders, { status: 200 });
   } catch (error) {
@@ -29,14 +34,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const isAuthenticated = verifyAccessCookies(req);
+    const user: any = requireAuth(req);
+    const userId = user && user?.userId;
 
-    if (!isAuthenticated) {
-      return NextResponse.json(
-        { message: "User not authenticated" },
-        { status: 401 }
-      );
-    }
     const requestData = await req.json();
     const newFolderName = requestData?.folderName;
 
@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const client = await clientPromise;
-    const db = client.db("snippet_vault_db");
+    const db = await getDb();
+
     const newFolder = {
       title: newFolderName,
       createdAt: new Date(),
@@ -63,6 +63,11 @@ export async function POST(req: NextRequest) {
         { _id: result.insertedId },
         { $set: { folderId: result.insertedId?.toString() } }
       );
+
+    const cacheKey = `folders_list:owner:${userId}:all`;
+
+    /**deleting previous cache of folders */
+    await cacheDel(cacheKey);
 
     return NextResponse.json({ message: "Folder created" }, { status: 201 });
   } catch (error) {

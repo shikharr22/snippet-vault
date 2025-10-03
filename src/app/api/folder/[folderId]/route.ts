@@ -1,28 +1,34 @@
-import clientPromise from "@/lib/mongodb";
-import { verifyAccessCookies } from "@/lib/utils";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, getDb, withCacheLock, cacheDel } from "@/lib/infra";
 
 export async function GET(req: NextRequest) {
   try {
-    const isAuthenticated = verifyAccessCookies(req);
-    if (!isAuthenticated) {
-      return NextResponse.json(
-        { message: "User not authenticated" },
-        { status: 401 }
-      );
-    }
-    const client = await clientPromise;
-    const db = await client.db("snippet_vault_db");
+    // Validate user
+    const user: any = requireAuth(req);
+    const userId = user && user.userId;
 
-    const url = new URL(req?.url);
+    // Connect to DB
+    const db = await getDb();
 
-    const folderId = url?.toString()?.split("/")?.pop();
+    // Extract folderId from URL
+    const url = new URL(req.url);
+    const folderId = url.pathname.split("/").pop();
 
-    const folder = await db.collection("folders").findOne({ folderId });
+    // Build cache key
+    const cacheKey = `folder:owner:${userId}:folderId:${folderId}`;
+
+    // Fetch folder with cache
+    const folder = await withCacheLock(
+      cacheKey,
+      async () => {
+        return await db.collection("Folders").findOne({ folderId });
+      },
+      { ttlSeconds: 60 }
+    );
 
     return NextResponse.json(folder, { status: 200 });
   } catch (error) {
-    console.error("Error fetching snippets:", error);
+    console.error("Error fetching folder:", error);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }
@@ -32,37 +38,40 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const isAuthenticated = verifyAccessCookies(req);
-    if (!isAuthenticated) {
-      return NextResponse.json(
-        { message: "User not authenticated" },
-        { status: 401 }
-      );
-    }
-    const client = await clientPromise;
-    const db = await client.db("snippet_vault_db");
+    // Validate user
+    const user: any = requireAuth(req);
+    const userId = user && user.userId;
 
-    const url = new URL(req?.url);
+    // Connect to DB
+    const db = await getDb();
 
-    const folderId = url?.toString()?.split("/")?.pop();
+    // Extract folderId from URL
+    const url = new URL(req.url);
+    const folderId = url.pathname.split("/").pop();
 
-    /**deleting folder */
+    // Build cache key
+    const cacheKey = `folder:owner:${userId}:folderId:${folderId}`;
+
+    // Delete folder with cache lock
     const deletedFolder = await db
       .collection("Folders")
       .findOneAndDelete({ folderId });
 
-    /**updating the parent folder id for the snippets ids linked to deleted folder */
+    // Update parentFolderId for snippets linked to deleted folder
     deletedFolder?.snippetIds?.forEach(async (snippetId: string) => {
       await db
         .collection("Snippets")
         .updateOne({ snippetId }, { $set: { parentFolderId: "" } });
     });
+
+    await cacheDel(cacheKey);
+
     return NextResponse.json(
       { message: "Folder deleted successfully" },
-      { status: 201 }
+      { status: 200 }
     );
   } catch (error) {
-    console.error("Error fetching snippets:", error);
+    console.error("Error deleting folder:", error);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

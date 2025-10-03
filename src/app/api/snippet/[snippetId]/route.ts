@@ -1,31 +1,34 @@
-import clientPromise from "@/lib/mongodb";
-import { verifyAccessCookies } from "@/lib/utils";
+import { cacheDel, getDb, requireAuth, withCacheLock } from "@/lib/infra";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
-    const isAuthenticated = verifyAccessCookies(req);
+    // Validate user
+    const user: any = requireAuth(req);
+    const userId = user && user.userId;
 
-    if (!isAuthenticated) {
-      return NextResponse.json(
-        { message: "User not authenticated" },
-        { status: 401 }
-      );
-    }
-    const client = await clientPromise;
-    const db = await client.db("snippet_vault_db");
+    // Connect to DB
+    const db = await getDb();
 
-    /**getting snippet id from URL */
-    const url = new URL(req?.url);
-    const snippetId = url?.toString()?.split("/")?.pop();
+    // Get snippetId from URL
+    const url = new URL(req.url);
+    const snippetId = url.pathname.split("/").pop();
 
-    const snippet = await db
-      .collection("Snippets")
-      .findOne({ snippetId: snippetId });
+    // Build cache key
+    const cacheKey = `snippet:owner:${userId}:snippetId:${snippetId}`;
+
+    // Fetch snippet with cache
+    const snippet = await withCacheLock(
+      cacheKey,
+      async () => {
+        return await db.collection("Snippets").findOne({ snippetId });
+      },
+      { ttlSeconds: 60 }
+    );
 
     return NextResponse.json(snippet, { status: 200 });
   } catch (error) {
-    console.error("Error fetching snippets:", error);
+    console.error("Error fetching snippet:", error);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }
@@ -35,29 +38,24 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
-    const isAuthenticated = verifyAccessCookies(req);
+    // Validate user
+    const user: any = requireAuth(req);
+    const userId = user && user.userId;
 
-    if (!isAuthenticated) {
-      return NextResponse.json(
-        { message: "User not authenticated" },
-        { status: 401 }
-      );
-    }
+    // Connect to DB
+    const db = await getDb();
 
-    const client = await clientPromise;
-    const db = await client.db("snippet_vault_db");
-
-    /**getting snippet id from URL */
-    const url = new URL(req?.url);
-    const snippetId = url?.toString()?.split("/")?.pop();
-    const updatedSnippet = await req?.json();
+    // Get snippetId from URL
+    const url = new URL(req.url);
+    const snippetId = url.pathname.split("/").pop();
+    const updatedSnippet = await req.json();
 
     // Remove _id from updatedSnippet to avoid immutable field error
     if ("_id" in updatedSnippet) {
       delete updatedSnippet._id;
     }
 
-    /**updating the current snippet */
+    // Update the current snippet
     const snippet = await db
       .collection("Snippets")
       .findOneAndUpdate(
@@ -70,7 +68,7 @@ export async function PUT(req: NextRequest) {
       .collection("Folders")
       .findOne({ snippetIds: snippetId });
 
-    /**check if the parent folder is updated */
+    // Check if the parent folder is updated
     if (currentParentFolder?.folderId !== snippet?.parentFolderId) {
       await db.collection("Folders").updateOne(
         { folderId: currentParentFolder?.folderId },
@@ -80,21 +78,32 @@ export async function PUT(req: NextRequest) {
         }
       );
 
-      await db.collection("Folders").updateOne(
+      const folder = await db.collection("Folders").findOneAndUpdate(
         { folderId: snippet?.parentFolderId },
         {
           $addToSet: { snippetIds: snippetId },
           $inc: { totalSnippets: 1 },
         }
       );
+
+      await db
+        .collection("Snippets")
+        .updateOne(
+          { snippetId: snippet?.snippetId },
+          { $set: { parentFolderName: folder?.title } }
+        );
     }
+
+    // Invalidate cache for this snippet
+    const cacheKey = `snippet:owner:${userId}:snippetId:${snippetId}`;
+    await cacheDel(cacheKey);
 
     return NextResponse.json(
       { message: "Snippet updated succesfully" },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error fetching snippets:", error);
+    console.error("Error updating snippet:", error);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }
@@ -104,20 +113,16 @@ export async function PUT(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const isAuthenticated = verifyAccessCookies(req);
+    // Validate user
+    const user: any = requireAuth(req);
+    const userId = user && user.userId;
 
-    if (!isAuthenticated) {
-      return NextResponse.json(
-        { message: "User not authenticated" },
-        { status: 401 }
-      );
-    }
+    // Connect to DB
+    const db = await getDb();
 
-    const client = await clientPromise;
-    const db = await client.db("snippet_vault_db");
-
-    const url = new URL(req?.url);
-    const snippetId = url?.toString()?.split("/").pop();
+    // Get snippetId from URL
+    const url = new URL(req.url);
+    const snippetId = url.pathname.split("/").pop();
 
     // Check if snippet exists
     const snippet = await db.collection("Snippets").findOne({ snippetId });
@@ -140,12 +145,16 @@ export async function DELETE(req: NextRequest) {
       }
     );
 
+    // Invalidate cache for this snippet
+    const cacheKey = `snippet:owner:${userId}:snippetId:${snippetId}`;
+    await cacheDel(cacheKey);
+
     return NextResponse.json(
       { message: "Snippet deleted succesfully" },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error fetching snippets:", error);
+    console.error("Error deleting snippet:", error);
     return NextResponse.json(
       { message: "Internal Server Error" },
       { status: 500 }

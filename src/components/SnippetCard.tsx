@@ -13,6 +13,7 @@ interface SnippetCardProps {
   code: string;
   createdAt: Date;
   tags: string[];
+  parentFolderName: string;
   onSnippetDelete?: () => void;
 }
 
@@ -42,6 +43,7 @@ export default function SnippetCard({
   code,
   tags,
   createdAt,
+  parentFolderName,
   onSnippetDelete,
 }: SnippetCardProps) {
   const router = useRouter();
@@ -123,8 +125,16 @@ export default function SnippetCard({
           <Clipboard className="w-5 h-5" />
         </button>
       </div>
+
+      <div className="text-xs text-gray-600">
+        Folder:{" "}
+        <span className="italic text-gray-800 uppercase">
+          {parentFolderName}
+        </span>
+      </div>
+
       <div className="text-xs text-gray-800">
-        <span className="text-xs text-gray-600">Created at : </span>
+        <span className="text-xs text-gray-600">Created : </span>
         {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
       </div>
     </div>

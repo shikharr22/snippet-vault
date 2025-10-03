@@ -214,6 +214,7 @@ export default function DashboardPage() {
               code={snippet?.code}
               createdAt={snippet?.createdAt}
               tags={snippet?.tags}
+              parentFolderName={snippet?.parentFolderName}
               onSnippetDelete={handleSnippetDelete}
             />
           ))

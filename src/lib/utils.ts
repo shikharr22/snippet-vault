@@ -10,9 +10,9 @@ export function verifyAccessCookies(req: NextRequest) {
 
   try {
     const auth_token_secret_key = process.env.AUTH_TOKEN_SECRET_KEY ?? "";
-    const isValid = jwt.verify(accessToken, auth_token_secret_key);
+    const decodedToken = jwt.verify(accessToken, auth_token_secret_key);
 
-    return isValid;
+    return decodedToken;
   } catch (error) {
     console.error("Error in access token verification", error);
     throw new Error("Error in access token verification");

@@ -42,13 +42,20 @@ export async function POST(req: NextRequest) {
         { $set: { snippetId: result.insertedId?.toString() } }
       );
 
-    await db.collection("Folders").updateOne(
+    const parentFolder = await db.collection("Folders").findOneAndUpdate(
       { folderId: reqPayload?.parentFolderId },
       {
         $addToSet: { snippetIds: result.insertedId?.toString() },
         $inc: { totalSnippets: 1 },
       }
     );
+
+    await db
+      .collection("Snippets")
+      .updateOne(
+        { _id: result?.insertedId },
+        { $set: { parentFolderName: parentFolder?.title } }
+      );
 
     return NextResponse.json(
       { message: "Snippet added successfully" },
