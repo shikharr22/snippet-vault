@@ -1,48 +1,56 @@
-import clientPromise from "@/lib/mongodb";
-import { verifyAccessCookies } from "@/lib/utils";
-import { IFilter } from "@/models/Filters";
-import { ISnippet } from "@/models/Snippet";
 import { NextRequest, NextResponse } from "next/server";
+import { requireAuth, getDb, withCacheLock } from "@/lib/infra";
+import { IFilter } from "@/models/Filters";
+import { JwtPayload } from "jsonwebtoken";
 
 export async function GET(req: NextRequest) {
   try {
-    const isAuthenticated = verifyAccessCookies(req);
+    // Validate user
+    const user: JwtPayload = requireAuth(req) as JwtPayload;
+    const userId = user && user.userId;
 
-    if (!isAuthenticated) {
-      return NextResponse.json(
-        { message: "User not authenticated" },
-        { status: 401 }
-      );
-    }
-    const client = await clientPromise;
-    const db = await client.db("snippet_vault_db");
+    // Connect to DB
+    const db = await getDb();
 
-    // Get all snippets
-    const snippets = await db
-      .collection("Snippets")
-      .find({}, { projection: { tags: 1 } })
-      .toArray();
+    // Build cache key
+    const cacheKey = `filters:owner:${userId}`;
 
-    const tagsFilter = generateTagsFilter(snippets);
+    // Fetch filters with cache
+    const filters = await withCacheLock(
+      cacheKey,
+      async () => {
+        // Get all snippets
+        const snippets = await db
+          .collection("Snippets")
+          .find({ userId }, { projection: { tags: 1 } })
+          .toArray();
 
-    const folders = await db
-      .collection("Folders")
-      .find({}, { projection: { title: 1, folderId: 1 } })
-      .toArray();
+        const tagsFilter = generateTagsFilter(snippets);
 
-    const foldersFilter = generateFoldersFilters(folders);
+        // const folders = await db
+        //   .collection("Folders")
+        //   .find({}, { projection: { title: 1, folderId: 1 } })
+        //   .toArray();
 
-    return NextResponse.json([tagsFilter, foldersFilter], { status: 200 });
+        // const foldersFilter = generateFoldersFilters(folders);
+
+        return [tagsFilter];
+      },
+      { ttlSeconds: 60 }
+    );
+
+    return NextResponse.json(filters, { status: 200 });
   } catch (error) {
-    console.log("Internal server error");
+    console.error("Internal server error", error);
     return NextResponse.json(
       { message: "Internal server error" },
       { status: 500 }
     );
   }
 }
+// ...existing code...
 
-export const FiltersMap = ["tags", "folders"];
+export const FiltersMap = ["tags"];
 
 function generateTagsFilter(snippets: Array<any>): IFilter {
   // Collect all tags into a Set for uniqueness
@@ -70,20 +78,20 @@ function generateTagsFilter(snippets: Array<any>): IFilter {
   return tagsFilter;
 }
 
-function generateFoldersFilters(folders: Array<any>): IFilter {
-  // Collect all folder titles and ids
-  const foldersOptions = folders.map((folder) => ({
-    text: folder.title,
-    value: folder.folderId,
-    disabled: false,
-  }));
+// function generateFoldersFilters(folders: Array<any>): IFilter {
+//   // Collect all folder titles and ids
+//   const foldersOptions = folders.map((folder) => ({
+//     text: folder.title,
+//     value: folder.folderId,
+//     disabled: false,
+//   }));
 
-  const foldersFilter: IFilter = {
-    label: "Folders",
-    value: "folders",
-    options: foldersOptions,
-    selectedValue: "",
-  };
+//   const foldersFilter: IFilter = {
+//     label: "Folders",
+//     value: "folders",
+//     options: foldersOptions,
+//     selectedValue: "",
+//   };
 
-  return foldersFilter;
-}
+//   return foldersFilter;
+// }

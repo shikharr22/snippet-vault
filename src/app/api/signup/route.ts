@@ -1,12 +1,10 @@
-import clientPromise from "@/lib/mongodb";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcrypt";
+import { getDb } from "@/lib/infra";
 
 export async function POST(req: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = await client.db("snippet_vault_db");
-
+    const db = await getDb();
     const requestData = await req?.json();
 
     // Hash the password before storing

@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import {
+  createAccessCookie,
+  createRefreshCookie,
+  generateAccessToken,
+  generateRefreshToken,
+  storeRefreshToken,
+} from "@/lib/auth";
+import { getDb } from "@/lib/infra";
 
 export async function POST(req: NextRequest) {
   try {
-    const client = await clientPromise;
-    const db = client.db("snippet_vault_db");
+    const db = await getDb();
 
     const requestData = await req?.json();
 
@@ -28,50 +33,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const auth_token_secret_key = process.env.AUTH_TOKEN_SECRET_KEY as string;
+    const accessToken = generateAccessToken(user?.userId);
+    const refreshToken = generateRefreshToken();
 
-    console.log(auth_token_secret_key);
+    await storeRefreshToken(user?.userId, refreshToken, {
+      ip: req.headers.get("x-forwarded-for") || "",
+    });
 
-    const accessToken = jwt.sign(
-      { userId: user?.userId },
-      auth_token_secret_key,
-      {
-        expiresIn: "2hr",
-      }
-    );
-
-    const refreshToken = jwt.sign(
-      { userId: user?.userId },
-      auth_token_secret_key,
-      {
-        expiresIn: "24hr",
-      }
-    );
+    const accessCookie = createAccessCookie(accessToken);
+    console.log(accessCookie);
+    const refreshCookie = createRefreshCookie(refreshToken);
 
     const response = NextResponse.json(
       { message: "Login successful" },
       { status: 200 }
     );
 
-    response.cookies.set({
-      name: "accessToken",
-      value: accessToken,
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 2 * 60 * 60,
-    });
-
-    response.cookies.set({
-      name: "refreshToken",
-      value: refreshToken,
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      path: "/api/",
-      maxAge: 24 * 60 * 60,
-    });
+    response.headers.set("Set-Cookie", accessCookie);
+    response.headers.append("Set-Cookie", refreshCookie);
 
     return response;
   } catch (error) {

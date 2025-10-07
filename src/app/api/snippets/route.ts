@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
-import { verifyAccessCookies } from "@/lib/utils";
-import { getDb, getRedis, requireAuth, withCacheLock } from "@/lib/infra";
+import { getDb, requireAuth, withCacheLock } from "@/lib/infra";
+import { JwtPayload } from "jsonwebtoken";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
   try {
     /**fetching user id from access token */
-    const user: any = requireAuth(req);
+    const user: JwtPayload = requireAuth(req) as JwtPayload;
     const userId = user && user?.userId;
 
     /**connecting to db once authenticated */
@@ -29,7 +28,10 @@ export async function GET(req: NextRequest) {
       .filter(Boolean);
 
     // build mongo query (keeps your original logic)
-    const mongoQuery: any = {};
+    const mongoQuery: { [key: string]: string | string[] | unknown } = {
+      userId,
+    };
+
     if (folderIdParam) {
       mongoQuery.parentFolderId = folderIdParam.toString();
     }
@@ -46,7 +48,7 @@ export async function GET(req: NextRequest) {
     // folder, tags, limit and sort direction to avoid collisions
     const cacheKey = `snippets_list:owner:${userId}:folder:${
       folderIdParam || "all"
-    }:tags:${tagsKey}:limit:${limitParam ?? "all"}:sort:createdAt:1`;
+    }:tags:${tagsKey || "all"}`;
 
     // fetch using cache-aside with stampede protection
     const snippets = await withCacheLock(

@@ -12,6 +12,7 @@ export interface ISnippet extends Document {
   createdBy: string;
   parentFolderId: string;
   parentFolderName: string;
+  userId: string;
 }
 
 /**schema for snippet */
@@ -25,6 +26,7 @@ const SnippetSchema = new Schema<ISnippet>({
   createdBy: { type: String, required: true },
   parentFolderId: { type: String, required: true },
   parentFolderName: { type: String, required: true },
+  userId: { type: String, required: true },
 });
 
 /**check if this Snippet model exists right now or not */
@@ -38,6 +40,7 @@ export const newSnippetSchema = z.object({
   tags: z.array(z.string().min(0)),
   parentFolderId: z.string(),
   parentFolderName: z.string(),
+  userId: z.string(),
 });
 
 export default Snippet;

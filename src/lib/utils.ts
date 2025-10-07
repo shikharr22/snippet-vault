@@ -1,24 +1,3 @@
-import { NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
-
-export function verifyAccessCookies(req: NextRequest) {
-  const accessToken = req?.cookies?.get("accessToken")?.value;
-
-  if (!accessToken) {
-    throw new Error("No access token found");
-  }
-
-  try {
-    const auth_token_secret_key = process.env.AUTH_TOKEN_SECRET_KEY ?? "";
-    const decodedToken = jwt.verify(accessToken, auth_token_secret_key);
-
-    return decodedToken;
-  } catch (error) {
-    console.error("Error in access token verification", error);
-    throw new Error("Error in access token verification");
-  }
-}
-
 // Utility function for GET requests
 export async function apiGet(url: string) {
   try {

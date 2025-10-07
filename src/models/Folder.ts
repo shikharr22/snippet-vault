@@ -8,6 +8,7 @@ export interface IFolder extends Document {
   createdBy: string;
   snippetIds: string[];
   totalSnippets: number;
+  userId: string;
 }
 
 /**schema for folder */
@@ -18,6 +19,7 @@ const SnippetSchema = new Schema<IFolder>({
   createdBy: { type: String, required: true },
   snippetIds: { type: [String], required: true },
   totalSnippets: { type: Number, required: true },
+  userId: { type: String, required: true },
 });
 
 /**check if this Folder model exists right now or not */

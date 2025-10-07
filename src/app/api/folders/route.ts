@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
-import { verifyAccessCookies } from "@/lib/utils";
 import { cacheDel, getDb, requireAuth, withCacheLock } from "@/lib/infra";
+import { JwtPayload } from "jsonwebtoken";
 
 export async function GET(req: NextRequest) {
   try {
-    const user: any = requireAuth(req);
+    const user: JwtPayload = requireAuth(req) as JwtPayload;
     const userId = user && user?.userId;
 
     const db = await getDb();
@@ -15,8 +14,7 @@ export async function GET(req: NextRequest) {
     const folders = await withCacheLock(
       cacheKey,
       async () => {
-        let res = await db.collection("Folders").find().toArray();
-        return res;
+        return await db.collection("Folders").find({ userId }).toArray();
       },
 
       { ttlSeconds: 60 }
@@ -36,7 +34,7 @@ export async function POST(req: NextRequest) {
   try {
     const user: any = requireAuth(req);
     const userId = user && user?.userId;
-
+    console.log(userId);
     const requestData = await req.json();
     const newFolderName = requestData?.folderName;
 
@@ -54,6 +52,7 @@ export async function POST(req: NextRequest) {
       createdAt: new Date(),
       snippetIds: [],
       totalSnippets: 0,
+      userId,
     };
     const result = await db.collection("Folders").insertOne(newFolder);
 

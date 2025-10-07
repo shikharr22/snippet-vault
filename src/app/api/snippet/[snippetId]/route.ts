@@ -1,10 +1,11 @@
 import { cacheDel, getDb, requireAuth, withCacheLock } from "@/lib/infra";
+import { JwtPayload } from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
     // Validate user
-    const user: any = requireAuth(req);
+    const user: JwtPayload = requireAuth(req) as JwtPayload;
     const userId = user && user.userId;
 
     // Connect to DB
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     const snippet = await withCacheLock(
       cacheKey,
       async () => {
-        return await db.collection("Snippets").findOne({ snippetId });
+        return await db.collection("Snippets").findOne({ snippetId, userId });
       },
       { ttlSeconds: 60 }
     );
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     // Validate user
-    const user: any = requireAuth(req);
+    const user: JwtPayload = requireAuth(req) as JwtPayload;
     const userId = user && user.userId;
 
     // Connect to DB
@@ -59,7 +60,7 @@ export async function PUT(req: NextRequest) {
     const snippet = await db
       .collection("Snippets")
       .findOneAndUpdate(
-        { snippetId },
+        { snippetId, userId },
         { $set: updatedSnippet },
         { returnDocument: "after" }
       );
@@ -114,7 +115,7 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     // Validate user
-    const user: any = requireAuth(req);
+    const user: JwtPayload = requireAuth(req) as JwtPayload;
     const userId = user && user.userId;
 
     // Connect to DB
@@ -125,7 +126,9 @@ export async function DELETE(req: NextRequest) {
     const snippetId = url.pathname.split("/").pop();
 
     // Check if snippet exists
-    const snippet = await db.collection("Snippets").findOne({ snippetId });
+    const snippet = await db
+      .collection("Snippets")
+      .findOne({ snippetId, userId });
     if (!snippet) {
       return NextResponse.json(
         { message: "Snippet not found" },

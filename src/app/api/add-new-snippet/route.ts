@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { newSnippetSchema } from "@/models/Snippet";
-import { verifyAccessCookies } from "@/lib/utils";
+import { cacheDel, requireAuth } from "@/lib/infra";
+import { JwtPayload } from "jsonwebtoken";
 
 export async function POST(req: NextRequest) {
   try {
-    const isAuthenticated = verifyAccessCookies(req);
-
-    if (!isAuthenticated) {
-      return NextResponse.json(
-        { message: "User not authenticated" },
-        { status: 401 }
-      );
-    }
+    const user: JwtPayload = requireAuth(req) as JwtPayload;
+    const userId = user && user?.userId;
 
     const client = await clientPromise;
     const db = client.db("snippet_vault_db");
@@ -38,12 +33,12 @@ export async function POST(req: NextRequest) {
     await db
       .collection("Snippets")
       .updateOne(
-        { _id: result.insertedId },
+        { _id: result.insertedId, userId },
         { $set: { snippetId: result.insertedId?.toString() } }
       );
 
     const parentFolder = await db.collection("Folders").findOneAndUpdate(
-      { folderId: reqPayload?.parentFolderId },
+      { folderId: reqPayload?.parentFolderId, userId },
       {
         $addToSet: { snippetIds: result.insertedId?.toString() },
         $inc: { totalSnippets: 1 },
@@ -56,6 +51,11 @@ export async function POST(req: NextRequest) {
         { _id: result?.insertedId },
         { $set: { parentFolderName: parentFolder?.title } }
       );
+
+    const cacheKey = `snippets_list:owner:${userId}:folder:all
+    }:tags:all`;
+
+    await cacheDel(cacheKey);
 
     return NextResponse.json(
       { message: "Snippet added successfully" },

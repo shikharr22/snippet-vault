@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, getDb, withCacheLock, cacheDel } from "@/lib/infra";
+import { JwtPayload } from "jsonwebtoken";
 
 export async function GET(req: NextRequest) {
   try {
     // Validate user
-    const user: any = requireAuth(req);
+    const user: JwtPayload = requireAuth(req) as JwtPayload;
     const userId = user && user.userId;
 
     // Connect to DB
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
     const folder = await withCacheLock(
       cacheKey,
       async () => {
-        return await db.collection("Folders").findOne({ folderId });
+        return await db.collection("Folders").findOne({ folderId, userId });
       },
       { ttlSeconds: 60 }
     );
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     // Validate user
-    const user: any = requireAuth(req);
+    const user: JwtPayload = requireAuth(req) as JwtPayload;
     const userId = user && user.userId;
 
     // Connect to DB
@@ -55,7 +56,7 @@ export async function DELETE(req: NextRequest) {
     // Delete folder with cache lock
     const deletedFolder = await db
       .collection("Folders")
-      .findOneAndDelete({ folderId });
+      .findOneAndDelete({ folderId, userId });
 
     // Update parentFolderId for snippets linked to deleted folder
     deletedFolder?.snippetIds?.forEach(async (snippetId: string) => {
