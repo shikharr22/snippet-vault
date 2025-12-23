@@ -1,5 +1,6 @@
 import { apiGet } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { Select, SelectItem } from "@heroui/react";
 
 interface FiltersProps {
   page: string;
@@ -12,9 +13,7 @@ export interface IFilter {
 }
 
 export default function Filters({ page }: FiltersProps) {
-  const [filters, setFilters] = useState<{ [key: string]: IFilter } | null>(
-    null
-  );
+  const [filters, setFilters] = useState<IFilter[]>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState(null);
 
@@ -37,7 +36,21 @@ export default function Filters({ page }: FiltersProps) {
   }, []);
   return (
     <>
-      <div>Filters</div>
+      <div>
+        {filters?.map((filter) => (
+          <Select
+            className="max-w-xs"
+            label={filter?.label}
+            placeholder=""
+            selectionMode="multiple"
+            key={filter?.value}
+          >
+            {(filter?.options ?? [])?.map((option) => (
+              <SelectItem key={option?.value}>{option?.text}</SelectItem>
+            ))}
+          </Select>
+        ))}
+      </div>
     </>
   );
 }

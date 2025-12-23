@@ -40,10 +40,10 @@ export async function GET(req: NextRequest) {
       foldersFilter = generateFoldersFilter(snippets);
     }
 
-    const filters = {
-      ...(tagsFilter ? { tags: tagsFilter } : {}),
-      ...(foldersFilter ? { folders: foldersFilter } : {}),
-    };
+    const filters = [
+      ...(tagsFilter ? [tagsFilter] : []),
+      ...(foldersFilter ? [foldersFilter] : []),
+    ];
 
     return NextResponse.json(filters, { status: 200 });
   } catch (error) {
