@@ -48,7 +48,7 @@ export default function DashboardPage() {
       });
       const data = await res.json();
 
-      setSnippets(data);
+      setSnippets(data?.items);
     } catch (error) {
       console.error("Error fetching snippets:", error);
     } finally {
@@ -205,7 +205,7 @@ export default function DashboardPage() {
             No snippets found.
           </div>
         ) : (
-          snippets.map((snippet: ISnippet) => (
+          snippets?.map((snippet: ISnippet) => (
             <SnippetCard
               key={snippet?.snippetId}
               id={snippet?.snippetId}

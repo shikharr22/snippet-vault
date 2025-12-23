@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, requireAuth, withCacheLock } from "@/lib/infra";
+import { getDb, requireAuth } from "@/lib/infra";
 import { JwtPayload } from "jsonwebtoken";
 
 export const runtime = "nodejs";
@@ -15,11 +15,16 @@ export async function GET(req: NextRequest) {
 
     // Extract query parameters safely
     const url = new URL(req.url);
-    const limitParam = url.searchParams.get("limit")
+    let limitParam = url.searchParams.get("limit")
       ? parseInt(url.searchParams.get("limit") ?? "")
-      : null;
+      : 2;
     const folderIdParam = url.searchParams.get("folderId") ?? "";
     const tagParam = url.searchParams.get("tags") ?? "";
+    const cursor = url.searchParams.get("cursor") ?? null;
+
+    /**Max limit to prevent excessive limit value */
+    const maxLimit = 100;
+    limitParam = Math.min(limitParam, maxLimit);
 
     // normalize tags for query + cache key
     const tagsArr = tagParam
@@ -41,35 +46,43 @@ export async function GET(req: NextRequest) {
       mongoQuery.tags = { $in: tagsArr };
     }
 
+    if (cursor) {
+      /**fetch snippets with Id greater than cursor date */
+      const cursorDate = new Date(cursor);
+      if (isNaN(cursorDate.getTime())) {
+        return NextResponse.json(
+          { message: "Invalid cursor" },
+          { status: 400 }
+        );
+      }
+      mongoQuery.createdAt = { $gt: cursorDate };
+    }
+
     /**tags key for cache */
-    const tagsKey = tagsArr.length ? tagsArr.join(",") : "all";
+    // const tagsKey = tagsArr.length ? tagsArr.join(",") : "all";
 
     // cache key includes user (so private lists can be cached per-user),
     // folder, tags, limit and sort direction to avoid collisions
-    const cacheKey = `snippets_list:owner:${userId}:folder:${
-      folderIdParam || "all"
-    }:tags:${tagsKey || "all"}`;
+    // const cacheKey = `snippets_list:owner:${userId}:folder:${
+    //   folderIdParam || "all"
+    // }:tags:${tagsKey || "all"}`;
 
     // fetch using cache-aside with stampede protection
-    const snippets = await withCacheLock(
-      cacheKey,
-      async () => {
-        let res = db
-          .collection("Snippets")
-          .find(mongoQuery)
-          .sort({ createdAt: 1 });
+    let res = db.collection("Snippets").find(mongoQuery).sort({ createdAt: 1 });
 
-        if (limitParam) res = res.limit(limitParam);
+    if (limitParam) {
+      /**limitParam + 1 used to check if more snippets are there */
+      res = res.limit(limitParam + 1);
+    }
 
-        const items = await res.toArray();
+    const snippets = await res.toArray();
 
-        // return the raw array (matches previous behavior)
-        return items;
-      },
-      { ttlSeconds: 60 }
-    );
+    const hasMore = snippets.length > limitParam;
+    const items = hasMore ? snippets.slice(0, -1) : snippets;
+    const nextCursor =
+      hasMore && items ? items[items.length - 1].createdAt : null;
 
-    return NextResponse.json(snippets, { status: 200 });
+    return NextResponse.json({ items, nextCursor, hasMore }, { status: 200 });
   } catch (error) {
     console.error("Error fetching snippets:", error);
     return NextResponse.json(

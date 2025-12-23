@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAuth, getDb, withCacheLock } from "@/lib/infra";
+import { requireAuth, getDb } from "@/lib/infra";
 import { IFilter } from "@/models/Filters";
 import { JwtPayload } from "jsonwebtoken";
 
@@ -13,31 +13,37 @@ export async function GET(req: NextRequest) {
     const db = await getDb();
 
     // Build cache key
-    const cacheKey = `filters:owner:${userId}`;
+    // const cacheKey = `filters:owner:${userId}`;
 
-    // Fetch filters with cache
-    const filters = await withCacheLock(
-      cacheKey,
-      async () => {
-        // Get all snippets
-        const snippets = await db
-          .collection("Snippets")
-          .find({ userId }, { projection: { tags: 1 } })
-          .toArray();
+    const { searchParams } = new URL(req?.url);
+    const page = searchParams?.get("page")?.toString();
 
-        const tagsFilter = generateTagsFilter(snippets);
+    if (!page) {
+      return NextResponse.json(
+        { message: "Invalid page param" },
+        { status: 400 }
+      );
+    }
 
-        // const folders = await db
-        //   .collection("Folders")
-        //   .find({}, { projection: { title: 1, folderId: 1 } })
-        //   .toArray();
+    // Get all snippets with tags and parent folders name
+    const snippets = await db
+      .collection("Snippets")
+      .find(
+        { userId },
+        { projection: { tags: 1, parentFolderName: 1, parentFolderId: 1 } }
+      )
+      .toArray();
 
-        // const foldersFilter = generateFoldersFilters(folders);
+    const tagsFilter = generateTagsFilter(snippets);
+    let foldersFilter = {};
+    if (page === "snippets") {
+      foldersFilter = generateFoldersFilter(snippets);
+    }
 
-        return [tagsFilter];
-      },
-      { ttlSeconds: 60 }
-    );
+    const filters = {
+      ...(tagsFilter ? { tags: tagsFilter } : {}),
+      ...(foldersFilter ? { folders: foldersFilter } : {}),
+    };
 
     return NextResponse.json(filters, { status: 200 });
   } catch (error) {
@@ -65,7 +71,6 @@ function generateTagsFilter(snippets: Array<any>): IFilter {
   const tagsOptions = Array.from(tagSet).map((tag) => ({
     text: tag,
     value: tag,
-    disabled: false,
   }));
 
   const tagsFilter: IFilter = {
@@ -76,6 +81,29 @@ function generateTagsFilter(snippets: Array<any>): IFilter {
   };
 
   return tagsFilter;
+}
+
+function generateFoldersFilter(snippets: Array<any>): IFilter {
+  // Collect all tags into a Set for uniqueness
+  const foldersMap = new Map<string, string>();
+  snippets.forEach((snippet) => {
+    foldersMap.set(snippet?.parentFolderId, snippet?.parentFolderName);
+  });
+
+  // Format as [{text, value}]
+  const foldersOptions = Array.from(foldersMap.entries()).map(([id, name]) => ({
+    text: name,
+    value: id,
+  }));
+
+  const foldersFilter: IFilter = {
+    label: "Folders",
+    value: "folders",
+    options: foldersOptions,
+    selectedValue: "",
+  };
+
+  return foldersFilter;
 }
 
 // function generateFoldersFilters(folders: Array<any>): IFilter {

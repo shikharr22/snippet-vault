@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
-import { newSnippetSchema } from "@/models/Snippet";
-import { cacheDel, requireAuth } from "@/lib/infra";
+import { requireAuth } from "@/lib/infra";
 import { JwtPayload } from "jsonwebtoken";
+import { newSnippetSchema } from "@/lib/validations";
+import { ObjectId } from "mongodb";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,44 +19,37 @@ export async function POST(req: NextRequest) {
 
     if (!validationResult.success) {
       return NextResponse.json(
-        { message: "Invalid input", errors: validationResult.error.format() },
+        { message: "Invalid input", errors: validationResult.error.flatten() },
         { status: 400 }
       );
     }
 
-    const newSnippet = {
-      ...reqPayload,
-      createdAt: new Date(),
-    };
+    /**new id for new snippet */
+    const newId = new ObjectId();
 
-    const result = await db.collection("Snippets").insertOne(newSnippet);
-
-    await db
-      .collection("Snippets")
-      .updateOne(
-        { _id: result.insertedId, userId },
-        { $set: { snippetId: result.insertedId?.toString() } }
-      );
-
+    /**updating parent folder snippets count */
     const parentFolder = await db.collection("Folders").findOneAndUpdate(
       { folderId: reqPayload?.parentFolderId, userId },
       {
-        $addToSet: { snippetIds: result.insertedId?.toString() },
+        $addToSet: { snippetIds: newId?.toString() },
         $inc: { totalSnippets: 1 },
       }
     );
 
-    await db
-      .collection("Snippets")
-      .updateOne(
-        { _id: result?.insertedId },
-        { $set: { parentFolderName: parentFolder?.title } }
-      );
+    const newSnippet = {
+      ...reqPayload,
+      userId,
+      createdAt: new Date(),
+      _id: newId,
+      snippetId: newId?.toString(),
+      parentFolderName: parentFolder?.title ?? null,
+    };
 
-    const cacheKey = `snippets_list:owner:${userId}:folder:all
-    }:tags:all`;
+    await db.collection("Snippets").insertOne(newSnippet);
 
-    await cacheDel(cacheKey);
+    // const cacheKey = `snippets_list:owner:${userId}:folder:all:tags:all`;
+
+    // await cacheDel(cacheKey);
 
     return NextResponse.json(
       { message: "Snippet added successfully" },

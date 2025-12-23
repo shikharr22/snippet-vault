@@ -158,11 +158,11 @@ export async function withCacheLock<T>(
 
   // Fast path: return cached value if present
   const cached = await cacheGet<T>(key);
-  if (cached !== null) {
-    console.log("fetched from cache", key);
-    // Cache hit
-    return cached;
-  }
+  // if (cached !== null) {
+  //   console.log("fetched from cache", key);
+  //   // Cache hit
+  //   return cached;
+  // }
 
   let lock: any = null;
   try {

@@ -5,17 +5,20 @@ import { ISnippet } from "@/models/Snippet";
 import SnippetCard from "@/components/SnippetCard";
 import { apiGet } from "@/lib/utils";
 import { IFilter } from "@/models/Filters";
+import Filters from "@/components/Filters";
 
 export default function FolderPage() {
   const pathname = usePathname();
   const [snippets, setSnippets] = useState<ISnippet[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [filters, setFilters] = useState<IFilter[]>([]);
-  const [selectedFilters, setSelectedFilters] = useState<{
-    [key: string]: string;
-  }>();
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(false);
 
-  const fetchSnippets = async (params?: { [key: string]: string }) => {
+  const fetchSnippets = async (
+    params?: { [key: string]: string },
+    cursor?: string | null
+  ) => {
     setIsLoading(true);
     try {
       const folderId = pathname?.split("/").pop() as string;
@@ -25,9 +28,20 @@ export default function FolderPage() {
           url += `&${key}=${params[key]}`;
         });
       }
+      if (cursor) {
+        url += `&cursor=${encodeURIComponent(cursor)}`;
+      }
+
       const data = await apiGet(url);
-      console.log("data", data);
-      setSnippets(data);
+
+      if (cursor) {
+        setSnippets((prev) => [...prev, ...(data?.items || [])]);
+      } else {
+        setSnippets(data?.items || []);
+      }
+
+      setCursor(data?.nextCursor);
+      setHasMore(data?.hasMore);
     } catch (error) {
       console.error("Failed to fetch snippets", error);
     } finally {
@@ -45,60 +59,18 @@ export default function FolderPage() {
     }
   };
 
-  const handleFilterChange = (filterName: string, selectedValue: string) => {
-    setSelectedFilters((prev) => {
-      const updatedSelectedFilters = { ...prev, [filterName]: selectedValue };
-      fetchSnippets(updatedSelectedFilters);
-      return updatedSelectedFilters;
-    });
-
-    setFilters((prev) => {
-      const updatedFilters: IFilter[] = prev?.map((filter) => {
-        if (filter?.value === filterName) {
-          filter.selectedValue = selectedValue;
-        }
-        return filter;
-      });
-
-      return updatedFilters;
-    });
-  };
-
   useEffect(() => {
-    fetchSnippets();
+    fetchSnippets({}, cursor);
     fetchFilters();
   }, [pathname]);
   const handleSnippetDelete = () => {
+    setCursor(null);
     fetchSnippets();
   };
 
   return (
     <div className="flex flex-col h-96">
-      {/* Fixed filters bar at the top */}
-      <div className="sticky top-20 z-20 py-2 px-4 flex gap-4 items-center">
-        {filters.map((filter: any) => (
-          <div className="flex items-center gap-2" key={filter.value}>
-            <label className="text-sm font-medium">{filter.label}:</label>
-            <select
-              className="px-2 py-1 border rounded text-sm"
-              onChange={(e) =>
-                handleFilterChange(filter?.value, e.target.value)
-              }
-            >
-              <option value="">All</option>
-              {filter.options.map((option: any) => (
-                <option
-                  key={option.value}
-                  value={option.label}
-                  disabled={option.disabled}
-                >
-                  {option.text}
-                </option>
-              ))}
-            </select>
-          </div>
-        ))}
-      </div>
+      <Filters page="folder" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 p-4 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center min-h-screen">
@@ -125,6 +97,15 @@ export default function FolderPage() {
               No snippets found for this folder.
             </p>
           </div>
+        )}
+        {hasMore && (
+          <button
+            onClick={() => fetchSnippets({}, cursor)}
+            disabled={isLoading}
+            className="mx-auto my-4 px-4 py-2 bg-blue-200"
+          >
+            {isLoading ? "Loading..." : "Load more"}
+          </button>
         )}
       </div>
     </div>

@@ -3,6 +3,7 @@ import TopBar from "@/components/TopBar";
 import "./globals.css";
 import { usePathname } from "next/navigation";
 import BottomNavbar from "@/components/BottomNavbar";
+import { HeroUIProvider } from "@heroui/react";
 
 export default function RootLayout({
   children,
@@ -29,20 +30,26 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {pathname !== "/" ? (
-          <TopBar
-            sectionName={pagesConfig?.[currentPage]?.label as string}
-            showBackButton={pagesConfig[currentPage]?.showBackButton as boolean}
-          />
-        ) : null}
-        <main className="pt-16">
-          {" "}
-          {/* Adjust padding for fixed navbar */}
-          {children}
-        </main>
-        {pathname !== "/" && pathname !== "/login" && pathname !== "/signup" ? (
-          <BottomNavbar />
-        ) : null}
+        <HeroUIProvider>
+          {pathname !== "/" ? (
+            <TopBar
+              sectionName={pagesConfig?.[currentPage]?.label as string}
+              showBackButton={
+                pagesConfig[currentPage]?.showBackButton as boolean
+              }
+            />
+          ) : null}
+          <main className="pt-16">
+            {" "}
+            {/* Adjust padding for fixed navbar */}
+            {children}
+          </main>
+          {pathname !== "/" &&
+          pathname !== "/login" &&
+          pathname !== "/signup" ? (
+            <BottomNavbar />
+          ) : null}
+        </HeroUIProvider>
       </body>
     </html>
   );

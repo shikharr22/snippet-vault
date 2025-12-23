@@ -13,7 +13,7 @@ interface SnippetCardProps {
   code: string;
   createdAt: Date;
   tags: string[];
-  parentFolderName: string;
+  parentFolderName?: string;
   onSnippetDelete?: () => void;
 }
 

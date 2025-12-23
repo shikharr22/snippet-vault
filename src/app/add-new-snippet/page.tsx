@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { apiPost, apiGet } from "@/lib/utils";
 
 import { Plus, X } from "lucide-react";
@@ -7,24 +7,41 @@ import { Textarea } from "@/components/Textarea";
 import { Button } from "@/components/Button";
 import { InputField } from "@/components/InputField";
 import * as z from "zod";
-import { newSnippetSchema } from "@/models/Snippet";
 import { IFolder } from "@/models/Folder";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { newSnippetSchema } from "@/lib/validations";
+import { debounce } from "lodash";
 
 type INewSnippet = z.infer<typeof newSnippetSchema>;
 
 export default function SnippetForm() {
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    code: "",
-    tags: [],
-    parentFolderId: "",
-  } as INewSnippet);
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<INewSnippet>({
+    resolver: zodResolver(newSnippetSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      code: "",
+      tags: [],
+      parentFolderId: "",
+    },
+  });
   const [showTagsInput, setShowTagsInput] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [foldersList, setFoldersList] = useState<IFolder[]>([] as IFolder[]);
+  const [isDuplicate, setIsDuplicate] = useState<boolean>(false);
+
   const router = useRouter();
+
+  const tags = watch("tags");
 
   /**method to add tags */
   const addTag = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -32,8 +49,8 @@ export default function SnippetForm() {
     if (!showTagsInput) {
       setShowTagsInput(true);
     } else {
-      if (tagInput.trim() && !form?.tags?.includes(tagInput)) {
-        setForm({ ...form, tags: [...form?.tags, tagInput.trim()] });
+      if (tagInput.trim() && !tags?.includes(tagInput)) {
+        setValue("tags", [...(tags as string[]), tagInput.trim()]);
         setTagInput("");
       }
       setShowTagsInput(false);
@@ -42,28 +59,19 @@ export default function SnippetForm() {
 
   /**method to remove tags */
   const removeTag = (tagToRemove: string) => {
-    setForm(() => {
-      if (form?.tags?.length === 1) {
-        setShowTagsInput(false);
-      }
-      return {
-        ...form,
-        tags: form?.tags?.filter((tag) => tag !== tagToRemove),
-      };
-    });
+    const newTags = tags?.filter((tag: string) => tag != tagToRemove);
+    setValue("tags", newTags);
+
+    if (newTags?.length === 0) {
+      setShowTagsInput(false);
+    }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setForm({ ...form, [e?.target?.name]: e?.target?.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onSubmit = async (data: Partial<INewSnippet>) => {
     try {
-      const data = await apiPost("/api/add-new-snippet", form);
-      console.log("Snippet saved successfully", data);
+      const res = await apiPost("/api/add-new-snippet", data);
+      console.log("Snippet saved successfully", res);
+      reset();
       router.push("/dashboard");
     } catch (error) {
       console.error("Error saving snippet", error);
@@ -79,48 +87,80 @@ export default function SnippetForm() {
     }
   };
 
+  /**method to check title redundancy */
+  const checkDuplicateTitle = useMemo(
+    () =>
+      debounce(async (value: string) => {
+        if (!value) {
+          setIsDuplicate(false);
+          return;
+        }
+
+        try {
+          const res = await apiGet(
+            `/api/check-title-redundancy?title=${encodeURIComponent(value)}`
+          );
+          setIsDuplicate(res?.exists);
+        } catch {
+          setIsDuplicate(false);
+        }
+      }, 300),
+    []
+  );
+
   useEffect(() => {
     fetchFoldersList();
   }, []);
 
   return (
-    <form className="max-w-md mx-auto  p-4" onSubmit={handleSubmit}>
+    <form className="max-w-md mx-auto  p-4" onSubmit={handleSubmit(onSubmit)}>
       {/* Title */}
       <div className="mb-3">
         <label className="text-sm font-medium">Title</label>
         <InputField
-          name="title"
+          {...register("title")}
           type="text"
           placeholder="Enter snippet title"
-          value={form?.title}
-          onChange={handleChange}
           className="mt-1"
+          onChange={(e) => {
+            checkDuplicateTitle(e.target.value);
+          }}
         />
+        {errors.title && (
+          <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>
+        )}
+        {isDuplicate && (
+          <p className="text-red-500 text-xs mt-1">Title already exists</p>
+        )}
       </div>
 
       {/* Description */}
       <div className="mb-3">
         <label className="text-sm font-medium">Description</label>
         <Textarea
-          name="description"
+          {...register("description")}
           placeholder="Enter snippet description"
-          value={form?.description}
-          onChange={handleChange}
           className="mt-1"
         />
+        {errors.description && (
+          <p className="text-red-500 text-xs mt-1">
+            {errors.description.message}
+          </p>
+        )}
       </div>
 
       {/* Code Block */}
       <div className="mb-3">
         <label className="text-sm font-medium">Code</label>
         <Textarea
-          name="code"
+          {...register("code")}
           placeholder="Paste your code here"
-          value={form?.code}
-          onChange={handleChange}
           className="mt-1 bg-gray-900 text-white font-mono"
           rows={5}
         />
+        {errors.code && (
+          <p className="text-red-500 text-xs mt-1">{errors.code.message}</p>
+        )}
       </div>
 
       {/* Tags */}
@@ -128,7 +168,7 @@ export default function SnippetForm() {
         <label className="text-sm font-medium">Tags</label>
         {/* Display Added Tags */}
         <div className="flex flex-wrap gap-2 mt-2">
-          {form?.tags?.map((tag, index) => (
+          {tags?.map((tag: string, index: number) => (
             <span
               key={index}
               className="flex items-center bg-gray-200 px-2 py-1 rounded text-sm"
@@ -170,11 +210,7 @@ export default function SnippetForm() {
         <label className="text-sm font-medium">Parent folder</label>
 
         <select
-          name="folder"
-          value={form?.parentFolderId}
-          onChange={(e) =>
-            setForm((prev) => ({ ...prev, parentFolderId: e.target.value }))
-          }
+          {...register("parentFolderId")}
           className="mt-1 px-2 py-1 border rounded w-full"
         >
           <option key="" value="">
