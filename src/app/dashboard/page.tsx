@@ -6,8 +6,19 @@ import { ISnippet } from "@/models/Snippet";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Card,
+  CardBody,
+  Skeleton,
+  useDisclosure,
+} from "@heroui/react";
 
 export default function DashboardPage() {
   /**Folders state */
@@ -19,7 +30,7 @@ export default function DashboardPage() {
   const [isSnippetsLoading, setisSnippetsLoading] = useState(false);
 
   // Modal state
-  const [showModal, setShowModal] = useState(false);
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const [newFolderName, setNewFolderName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -62,11 +73,11 @@ export default function DashboardPage() {
   }, []);
 
   const handleAddFolder = () => {
-    setShowModal(true);
+    onOpen();
   };
 
   const handleCancel = () => {
-    setShowModal(false);
+    onOpenChange();
     setNewFolderName("");
   };
 
@@ -84,7 +95,7 @@ export default function DashboardPage() {
       });
       if (res.ok) {
         fetchFolders();
-        setShowModal(false);
+        onOpenChange();
         setNewFolderName("");
       }
     } catch (error) {
@@ -104,61 +115,66 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 w-full">
+    <div className="p-6 w-full max-w-7xl mx-auto">
       {/* Modal for adding folder */}
-      {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-80 flex flex-col">
-            <h3 className="text-lg font-medium mb-4">Add New Folder</h3>
-            <input
-              type="text"
-              className="border rounded px-3 py-2 mb-4"
-              placeholder="Enter folder name"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              disabled={isSaving}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-                onClick={handleCancel}
-                disabled={isSaving}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange} placement="center">
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="text-lg font-semibold">
+                Add New Folder
+              </ModalHeader>
+              <ModalBody>
+                <Input
+                  label="Folder Name"
+                  placeholder="Enter folder name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  isDisabled={isSaving}
+                  variant="flat"
+                  autoFocus
+                />
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose} isDisabled={isSaving}>
+                  Cancel
+                </Button>
+                <Button
+                  className="bg-black text-white"
+                  onPress={handleSave}
+                  isLoading={isSaving}
+                >
+                  Create Folder
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
       {/* Folders Section */}
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-medium ">Folders</h2>
-        <button
-          className="p-2 rounded-full hover:bg-gray-100"
-          onClick={handleAddFolder}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">Folders</h2>
+        <Button
+          isIconOnly
+          variant="flat"
+          className="bg-gray-100 hover:bg-gray-200"
+          onPress={handleAddFolder}
         >
-          <Plus className="w-5 h-5 text-blue-600" />
-        </button>
+          <Plus className="w-5 h-5" />
+        </Button>
       </div>
-      <div className="flex gap-4 overflow-x-auto scrollbar-hide whitespace-nowrap">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
         {/* Folder cards */}
         {isFoldersLoading
           ? Array(4)
               .fill(null)
               .map((_, i) => (
-                <div
-                  key={i}
-                  className="flex flex-col justify-between p-3 w-32 h-24 bg-white rounded-lg shrink-0s"
-                >
-                  <Skeleton width="100%" height="100%" />
-                </div>
+                <Card key={i} className="border-0 shadow-sm">
+                  <CardBody className="p-4">
+                    <Skeleton className="w-full h-16 rounded" />
+                  </CardBody>
+                </Card>
               ))
           : folders?.map((folder: IFolder) => (
               <FolderCard
@@ -172,14 +188,17 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Snippets Section */}
-      <div className="flex justify-between items-center mt-8 mb-4">
-        <h2 className="text-xl font-medium">Recent Snippets</h2>
-        <div
-          className="text-blue-500 text-sm cursor-pointer"
-          onClick={() => router.push("/snippets")}
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">
+          Recent Snippets
+        </h2>
+        <Button
+          variant="light"
+          className="text-gray-600 font-medium"
+          onPress={() => router.push("/snippets")}
         >
           See all
-        </div>
+        </Button>
       </div>
       <div
         className="
@@ -193,12 +212,16 @@ export default function DashboardPage() {
           Array(3)
             .fill(null)
             .map((_, i) => (
-              <div
-                key={i}
-                className="flex flex-col justify-between p-3 w-full h-24 bg-white rounded-lg shrink-0s"
-              >
-                <Skeleton width="100%" height="100%" />
-              </div>
+              <Card key={i} className="border-0 shadow-sm">
+                <CardBody className="p-4 space-y-3">
+                  <Skeleton className="w-3/4 h-5 rounded" />
+                  <Skeleton className="w-full h-16 rounded" />
+                  <div className="flex gap-2">
+                    <Skeleton className="w-16 h-6 rounded-full" />
+                    <Skeleton className="w-20 h-6 rounded-full" />
+                  </div>
+                </CardBody>
+              </Card>
             ))
         ) : snippets.length === 0 ? (
           <div className="col-span-2 text-center text-gray-500 py-8">

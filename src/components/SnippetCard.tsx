@@ -5,6 +5,7 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import { apiDelete } from "@/lib/utils";
+import { Card, CardBody, Button, Chip } from "@heroui/react";
 
 interface SnippetCardProps {
   id: string;
@@ -17,24 +18,8 @@ interface SnippetCardProps {
   onSnippetDelete?: () => void;
 }
 
-// List of unique bg colors (Tailwind)
-const tagColors = [
-  "bg-blue-200",
-  "bg-green-200",
-  "bg-yellow-200",
-  "bg-pink-200",
-  "bg-purple-200",
-  "bg-red-200",
-  "bg-indigo-200",
-  "bg-teal-200",
-  "bg-orange-200",
-  "bg-cyan-200",
-  "bg-lime-200",
-  "bg-fuchsia-200",
-  "bg-rose-200",
-  "bg-violet-200",
-  "bg-emerald-200",
-];
+// List of unique chip colors
+const tagColors = ["primary", "secondary", "success", "warning", "danger"];
 
 export default function SnippetCard({
   id,
@@ -85,58 +70,67 @@ export default function SnippetCard({
   };
 
   return (
-    <div
-      className="relative p-4 bg-white rounded-lg flex flex-col gap-2 cursor-pointer"
-      onClick={() => handleSnippetCardClick(id)}
+    <Card
+      className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+      isPressable
+      onPress={() => handleSnippetCardClick(id)}
     >
-      <div className="flex justify-between items-center">
-        <h3 className="text-sm font-medium">{title}</h3>
-        <div className="flex justify-center items-center gap-5">
-          <button
-            className="flex gap-1 items-center text-blue-500 text-xs hover:underline"
-            onClick={handleDelete}
-            disabled={isDeleting}
-            aria-label="Delete snippet"
-          >
-            <Trash2 className="w-4 h-4 text-red-500" />
-          </button>
+      <CardBody className="p-4 space-y-3">
+        <div className="flex justify-between items-start">
+          <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
+          <div className="flex gap-2">
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              className="text-gray-500 hover:text-gray-700"
+              onPress={handleCopy}
+            >
+              <Clipboard className="w-4 h-4" />
+            </Button>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              className="text-gray-500 hover:text-red-500"
+              onPress={handleDelete}
+              isLoading={isDeleting}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
-      </div>
-      <p className="text-xs text-gray-600">{description}</p>
-      <div className="flex justify-between items-center mt-2">
-        <div className="flex gap-2 flex-wrap">
-          {tags?.map((tag, idx) => {
-            // Assign a unique color for each tag, cycling if more tags than colors
-            const colorClass = tagColors[idx % tagColors.length];
-            return (
-              <span
-                key={tag}
-                className={`text-xs px-2 py-1 rounded ${colorClass}`}
-              >
-                {tag}
-              </span>
-            );
-          })}
+
+        <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
+
+        {tags && tags.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {tags.map((tag, idx) => {
+              const colorVariant = tagColors[idx % tagColors.length] as any;
+              return (
+                <Chip
+                  key={tag}
+                  size="sm"
+                  variant="flat"
+                  color={colorVariant}
+                  className="text-xs"
+                >
+                  {tag}
+                </Chip>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex justify-between items-center text-xs text-gray-500">
+          {parentFolderName && (
+            <span className="font-medium">{parentFolderName}</span>
+          )}
+          <span>
+            {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
+          </span>
         </div>
-        <button
-          className="flex gap-1 items-center text-blue-500 text-xs hover:underline"
-          onClick={handleCopy}
-        >
-          <Clipboard className="w-5 h-5" />
-        </button>
-      </div>
-
-      <div className="text-xs text-gray-600">
-        Folder:{" "}
-        <span className="italic text-gray-800 uppercase">
-          {parentFolderName}
-        </span>
-      </div>
-
-      <div className="text-xs text-gray-800">
-        <span className="text-xs text-gray-600">Created : </span>
-        {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
-      </div>
-    </div>
+      </CardBody>
+    </Card>
   );
 }

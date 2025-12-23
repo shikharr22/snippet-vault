@@ -1,5 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
+import { Button, Card, CardBody, Divider } from "@heroui/react";
+import { Code, ArrowRight } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
@@ -13,34 +15,72 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <header className="text-2xl font-bold">SNIPPET VAULT</header>
-
-      <div className="flex-grow"></div>
-      <footer className="flex flex-col items-center mt-auto">
-        <button
-          className="bg-blue-600 text-white px-4 py-2 rounded"
-          onClick={handleSignUp}
-        >
-          Sign Up
-        </button>
-        <p className="mt-4">
-          Already an existing user?{" "}
-          <a href="#" className="text-blue-500 underline" onClick={handleLogIn}>
-            Log In
-          </a>
-        </p>
-        <div className="mt-4 text-center ">
-          <hr className="border-t border-gray-300 my-8 mx-9 mb-5 " />
-          <p className="mb-4">Or continue with</p>
-          <button className="m-2 p-2 bg-red-500 text-white rounded hover:bg-red-600">
-            Google
-          </button>
-          <button className="m-2 p-2 bg-gray-800 text-white rounded hover:bg-gray-900">
-            GitHub
-          </button>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-8">
+        {/* Logo */}
+        <div className="text-center">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-black rounded-lg mb-4">
+            <Code className="w-6 h-6 text-white" />
+          </div>
+          <h1 className="text-3xl font-semibold text-gray-900 tracking-tight">
+            Snippet Vault
+          </h1>
+          <p className="mt-2 text-gray-600">
+            Store and organize your code snippets
+          </p>
         </div>
-      </footer>
+
+        {/* Main Card */}
+        <Card className="border-0 shadow-sm">
+          <CardBody className="p-6">
+            <div className="space-y-4">
+              <Button
+                size="lg"
+                className="w-full bg-black text-white font-medium"
+                endContent={<ArrowRight className="w-4 h-4" />}
+                onClick={handleSignUp}
+              >
+                Get Started
+              </Button>
+
+              <div className="text-center text-sm text-gray-600">
+                Already have an account?{" "}
+                <button
+                  onClick={handleLogIn}
+                  className="text-black font-medium hover:underline"
+                >
+                  Sign in
+                </button>
+              </div>
+
+              <Divider className="my-4" />
+
+              <div className="text-center text-xs text-gray-500">
+                Or continue with
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="bordered"
+                  className="border-gray-200 text-gray-700"
+                >
+                  Google
+                </Button>
+                <Button
+                  variant="bordered"
+                  className="border-gray-200 text-gray-700"
+                >
+                  GitHub
+                </Button>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+
+        <div className="text-center text-xs text-gray-500">
+          Simple. Fast. Secure.
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,11 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { apiPost, apiGet } from "@/lib/utils";
-
 import { Plus, X } from "lucide-react";
-import { Textarea } from "@/components/Textarea";
-import { Button } from "@/components/Button";
-import { InputField } from "@/components/InputField";
 import * as z from "zod";
 import { IFolder } from "@/models/Folder";
 import { useRouter } from "next/navigation";
@@ -13,6 +9,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { newSnippetSchema } from "@/lib/validations";
 import { debounce } from "lodash";
+import {
+  Button,
+  Input,
+  Textarea,
+  Select,
+  SelectItem,
+  Chip,
+  Card,
+  CardBody,
+  CardHeader,
+} from "@heroui/react";
 
 type INewSnippet = z.infer<typeof newSnippetSchema>;
 
@@ -113,121 +120,140 @@ export default function SnippetForm() {
   }, []);
 
   return (
-    <form className="max-w-md mx-auto  p-4" onSubmit={handleSubmit(onSubmit)}>
-      {/* Title */}
-      <div className="mb-3">
-        <label className="text-sm font-medium">Title</label>
-        <InputField
-          {...register("title")}
-          type="text"
-          placeholder="Enter snippet title"
-          className="mt-1"
-          onChange={(e) => {
-            checkDuplicateTitle(e.target.value);
-          }}
-        />
-        {errors.title && (
-          <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>
-        )}
-        {isDuplicate && (
-          <p className="text-red-500 text-xs mt-1">Title already exists</p>
-        )}
-      </div>
-
-      {/* Description */}
-      <div className="mb-3">
-        <label className="text-sm font-medium">Description</label>
-        <Textarea
-          {...register("description")}
-          placeholder="Enter snippet description"
-          className="mt-1"
-        />
-        {errors.description && (
-          <p className="text-red-500 text-xs mt-1">
-            {errors.description.message}
-          </p>
-        )}
-      </div>
-
-      {/* Code Block */}
-      <div className="mb-3">
-        <label className="text-sm font-medium">Code</label>
-        <Textarea
-          {...register("code")}
-          placeholder="Paste your code here"
-          className="mt-1 bg-gray-900 text-white font-mono"
-          rows={5}
-        />
-        {errors.code && (
-          <p className="text-red-500 text-xs mt-1">{errors.code.message}</p>
-        )}
-      </div>
-
-      {/* Tags */}
-      <div className="mb-3">
-        <label className="text-sm font-medium">Tags</label>
-        {/* Display Added Tags */}
-        <div className="flex flex-wrap gap-2 mt-2">
-          {tags?.map((tag: string, index: number) => (
-            <span
-              key={index}
-              className="flex items-center bg-gray-200 px-2 py-1 rounded text-sm"
-            >
-              {tag}
-              <X
-                size={14}
-                className="ml-1 cursor-pointer text-gray-600 hover:text-gray-800"
-                onClick={() => removeTag(tag)}
+    <div className="min-h-screen bg-gray-50 pt-20 pb-24 px-4">
+      <div className="max-w-2xl mx-auto">
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4">
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Add New Snippet
+            </h1>
+            <p className="text-gray-600">Create and save your code snippet</p>
+          </CardHeader>
+          <CardBody className="space-y-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Title */}
+              <Input
+                {...register("title")}
+                label="Title"
+                placeholder="Enter snippet title"
+                variant="flat"
+                isInvalid={!!errors.title || isDuplicate}
+                errorMessage={
+                  errors.title?.message ||
+                  (isDuplicate ? "Title already exists" : "")
+                }
+                onChange={(e) => {
+                  checkDuplicateTitle(e.target.value);
+                }}
               />
-            </span>
-          ))}
-        </div>
-        <div className="flex items-end gap-2 mt-1">
-          {showTagsInput ? (
-            <InputField
-              name="tags"
-              type="text"
-              placeholder="Enter tag"
-              value={tagInput}
-              onChange={(e) => {
-                setTagInput(e.target.value);
-              }}
-              className="flex-1 p-1 text-xs"
-            />
-          ) : null}
-          <Button
-            className="flex items-center mt-2"
-            variant="outline"
-            size="sm"
-            onClick={addTag}
-          >
-            <Plus size={18} className="" />
-            {showTagsInput ? null : <span>Add tag</span>}
-          </Button>
-        </div>
-      </div>
-      <div className="mb-3">
-        <label className="text-sm font-medium">Parent folder</label>
 
-        <select
-          {...register("parentFolderId")}
-          className="mt-1 px-2 py-1 border rounded w-full"
-        >
-          <option key="" value="">
-            Select folder
-          </option>
-          {foldersList?.map((folder) => (
-            <option key={folder?.folderId} value={folder?.folderId}>
-              {folder?.title}
-            </option>
-          ))}
-          {/* Add more folder options as needed */}
-        </select>
+              {/* Description */}
+              <Textarea
+                {...register("description")}
+                label="Description"
+                placeholder="Enter snippet description"
+                variant="flat"
+                isInvalid={!!errors.description}
+                errorMessage={errors.description?.message}
+                minRows={3}
+              />
+
+              {/* Code Block */}
+              <Textarea
+                {...register("code")}
+                label="Code"
+                placeholder="Paste your code here"
+                variant="flat"
+                isInvalid={!!errors.code}
+                errorMessage={errors.code?.message}
+                classNames={{
+                  input: "bg-gray-900 text-gray-100 font-mono text-sm",
+                  inputWrapper: "bg-gray-900",
+                }}
+                minRows={8}
+              />
+
+              {/* Tags */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700">
+                  Tags
+                </label>
+
+                {/* Display Added Tags */}
+                {tags && tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag: string, index: number) => (
+                      <Chip
+                        key={index}
+                        onClose={() => removeTag(tag)}
+                        variant="flat"
+                        color="primary"
+                      >
+                        {tag}
+                      </Chip>
+                    ))}
+                  </div>
+                )}
+
+                {/* Tag Input */}
+                <div className="flex gap-2">
+                  {showTagsInput && (
+                    <Input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      placeholder="Enter tag"
+                      variant="flat"
+                      size="sm"
+                      className="flex-1"
+                    />
+                  )}
+                  <Button
+                    variant={showTagsInput ? "solid" : "flat"}
+                    color="primary"
+                    size="sm"
+                    startContent={<Plus className="w-4 h-4" />}
+                    onPress={addTag}
+                  >
+                    {showTagsInput ? "Add" : "Add Tag"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Parent Folder */}
+              <Select
+                {...register("parentFolderId")}
+                label="Parent Folder"
+                placeholder="Select a folder"
+                variant="flat"
+              >
+                {foldersList?.map((folder) => (
+                  <SelectItem key={folder.folderId} value={folder.folderId}>
+                    {folder.title}
+                  </SelectItem>
+                ))}
+              </Select>
+
+              {/* Save Button */}
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="light"
+                  onPress={() => router.back()}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-black text-white flex-1"
+                  size="lg"
+                >
+                  Save Snippet
+                </Button>
+              </div>
+            </form>
+          </CardBody>
+        </Card>
       </div>
-      {/* Save button */}
-      <Button type="submit" className="bg-blue-500 text-white">
-        Save
-      </Button>
-    </form>
+    </div>
   );
 }

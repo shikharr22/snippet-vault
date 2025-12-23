@@ -4,6 +4,7 @@ import { ISnippet } from "@/models/Snippet";
 import SnippetCard from "@/components/SnippetCard";
 import { apiGet } from "@/lib/utils";
 import Filters from "@/components/Filters";
+import { Button, Spinner } from "@heroui/react";
 
 export default function SnippetsPage() {
   const [snippets, setSnippets] = useState<ISnippet[]>([]);
@@ -43,50 +44,60 @@ export default function SnippetsPage() {
     fetchSnippets();
   };
 
-  if (isLoading) {
+  if (isLoading && !snippets.length) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-lg text-gray-700">Loading...</p>
+        <Spinner size="lg" />
+        <p className="text-gray-600 mt-4">Loading snippets...</p>
       </div>
     );
   }
 
-  if (!snippets.length) {
+  if (!snippets.length && !isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <p className="text-lg text-gray-700">No snippets found.</p>
+        <p className="text-gray-500 mt-2">
+          Create your first snippet to get started.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-96">
+    <div className="flex flex-col min-h-screen bg-gray-50">
       <Filters page="snippets" />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 p-4 overflow-y-auto">
-        {snippets?.map((snippet) => (
-          <div className="h-64" key={snippet?.snippetId}>
-            <SnippetCard
-              key={snippet?.snippetId}
-              id={snippet?.snippetId}
-              title={snippet?.title}
-              description={snippet?.description}
-              code={snippet?.code}
-              createdAt={snippet?.createdAt}
-              tags={snippet?.tags}
-              onSnippetDelete={handleSnippetDelete}
-            />
+      <div className="flex-1 p-4 pb-24">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {snippets?.map((snippet) => (
+              <SnippetCard
+                key={snippet?.snippetId}
+                id={snippet?.snippetId}
+                title={snippet?.title}
+                description={snippet?.description}
+                code={snippet?.code}
+                createdAt={snippet?.createdAt}
+                tags={snippet?.tags}
+                onSnippetDelete={handleSnippetDelete}
+              />
+            ))}
           </div>
-        ))}
+
+          {hasMore && (
+            <div className="flex justify-center mt-8">
+              <Button
+                variant="flat"
+                onPress={() => fetchSnippets(cursor)}
+                isLoading={isLoading}
+                className="min-w-32"
+              >
+                {isLoading ? "Loading..." : "Load More"}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
-      {hasMore && (
-        <button
-          onClick={() => fetchSnippets(cursor)}
-          disabled={isLoading}
-          className="mx-auto my-4 px-4 py-2 bg-blue-200"
-        >
-          {isLoading ? "Loading..." : "Load more"}
-        </button>
-      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Folder, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiDelete } from "@/lib/utils";
+import { Card, CardBody, Button } from "@heroui/react";
 
 interface FolderCardProps {
   id: string;
@@ -40,22 +41,30 @@ export default function FolderCard({
   };
 
   return (
-    <div
-      className="relative flex flex-col justify-between p-3 w-32 h-24 bg-white rounded-lg shrink-0 cursor-pointer"
-      onClick={handleCardClick}
+    <Card
+      className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer min-w-32 h-28"
+      isPressable
+      onPress={handleCardClick}
     >
-      {/* Delete Button */}
-      <button
-        className="absolute top-2 right-2 p-1 rounded hover:bg-gray-200"
-        onClick={handleDelete}
-        disabled={isDeleting}
-        aria-label="Delete folder"
-      >
-        <Trash2 className="w-4 h-4 text-red-500" />
-      </button>
-      <Folder className={`w-5 h-5 mb-2 text-blue-600`} />
-      <p className="text-sm font-small w-full truncate">{name}</p>
-      <p className="text-xs text-gray-500">{snippetCount} snippets</p>
-    </div>
+      <CardBody className="p-3 flex flex-col justify-between relative">
+        {/* Delete Button */}
+        <Button
+          isIconOnly
+          size="sm"
+          variant="light"
+          className="absolute top-1 right-1 w-6 h-6 min-w-0 text-gray-400 hover:text-red-500"
+          onPress={handleDelete}
+          isLoading={isDeleting}
+        >
+          <Trash2 className="w-3 h-3" />
+        </Button>
+
+        <Folder className="w-6 h-6 text-gray-600 mb-2" />
+        <div>
+          <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
+          <p className="text-xs text-gray-500">{snippetCount} snippets</p>
+        </div>
+      </CardBody>
+    </Card>
   );
 }
