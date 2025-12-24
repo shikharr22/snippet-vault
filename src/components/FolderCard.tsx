@@ -41,12 +41,11 @@ export default function FolderCard({
   };
 
   return (
-    <Card
-      className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer min-w-32 h-28"
-      isPressable
-      onPress={handleCardClick}
+    <div
+      className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer min-w-32 h-28 bg-white"
+      onClick={handleCardClick}
     >
-      <CardBody className="p-3 flex flex-col justify-between relative">
+      <div className="p-3 flex flex-col justify-between relative">
         {/* Delete Button */}
         <Button
           isIconOnly
@@ -64,7 +63,7 @@ export default function FolderCard({
           <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
           <p className="text-xs text-gray-500">{snippetCount} snippets</p>
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </div>
   );
 }

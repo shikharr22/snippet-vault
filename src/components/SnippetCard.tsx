@@ -70,12 +70,11 @@ export default function SnippetCard({
   };
 
   return (
-    <Card
-      className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-      isPressable
-      onPress={() => handleSnippetCardClick(id)}
+    <div
+      className="border-0 shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-white"
+      onClick={() => handleSnippetCardClick(id)}
     >
-      <CardBody className="p-4 space-y-3">
+      <div className="p-4 space-y-3">
         <div className="flex justify-between items-start">
           <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
           <div className="flex gap-2">
@@ -130,7 +129,7 @@ export default function SnippetCard({
             {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
           </span>
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </div>
   );
 }

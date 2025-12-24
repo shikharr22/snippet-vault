@@ -69,8 +69,8 @@ export default function FolderPage() {
   };
 
   return (
-    <div className="flex flex-col h-96">
-      <Filters page="folder" />
+    <div className="flex flex-col min-h-screen">
+      <Filters page="folder" onFiltersSelect={() => {}} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 p-4 overflow-y-auto">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center min-h-screen">

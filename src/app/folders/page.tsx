@@ -45,7 +45,7 @@ export default function FoldersPage() {
   }
 
   return (
-    <div className="flex flex-col h-96">
+    <div className="flex flex-col min-h-screen p-24">
       <div className="grid grid-cols-2 md:grid-cols-8 gap-4 flex-1 p-4 overflow-y-auto">
         {folders.map((folder) => (
           <FolderCard

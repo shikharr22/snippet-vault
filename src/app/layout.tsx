@@ -39,11 +39,7 @@ export default function RootLayout({
               }
             />
           ) : null}
-          <main className="pt-16">
-            {" "}
-            {/* Adjust padding for fixed navbar */}
-            {children}
-          </main>
+          <main>{children}</main>
           {pathname !== "/" &&
           pathname !== "/login" &&
           pathname !== "/signup" ? (

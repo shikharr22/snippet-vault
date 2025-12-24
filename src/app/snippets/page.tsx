@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import { ISnippet } from "@/models/Snippet";
 import SnippetCard from "@/components/SnippetCard";
-import { apiGet } from "@/lib/utils";
+import { addQueryParams, apiGet } from "@/lib/utils";
 import Filters from "@/components/Filters";
-import { Button, Spinner } from "@heroui/react";
+import { Button, select, Spinner } from "@heroui/react";
 
 export default function SnippetsPage() {
   const [snippets, setSnippets] = useState<ISnippet[]>([]);
@@ -12,12 +12,20 @@ export default function SnippetsPage() {
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(false);
 
-  const fetchSnippets = async (cursor?: string | null) => {
+  const fetchSnippets = async (
+    cursor?: string | null,
+    filterParams?: { [key: string]: string[] }
+  ) => {
     setIsLoading(true);
     try {
       let url = "/api/snippets";
-      const cursorParam = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
-      url += cursorParam;
+
+      const queryParams = addQueryParams({
+        ...(cursor ? { cursor } : {}),
+        ...filterParams,
+      });
+      url += "?" + queryParams;
+
       const data = await apiGet(url);
 
       if (cursor) {
@@ -65,8 +73,16 @@ export default function SnippetsPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      <Filters page="snippets" />
+    <div className="flex flex-col min-h-screen bg-gray-50 p-24">
+      <div>
+        <Filters
+          page="snippets"
+          onFiltersSelect={(selectedFilters) => {
+            fetchSnippets(cursor, selectedFilters);
+          }}
+        />
+      </div>
+
       <div className="flex-1 p-4 pb-24">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

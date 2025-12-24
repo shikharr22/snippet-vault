@@ -123,7 +123,7 @@ export default function SnippetForm() {
     <div className="min-h-screen bg-gray-50 pt-20 pb-24 px-4">
       <div className="max-w-2xl mx-auto">
         <Card className="border-0 shadow-sm">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-4 flex justify-between">
             <h1 className="text-2xl font-semibold text-gray-900">
               Add New Snippet
             </h1>

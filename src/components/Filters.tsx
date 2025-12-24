@@ -4,6 +4,7 @@ import { Select, SelectItem } from "@heroui/react";
 
 interface FiltersProps {
   page: string;
+  onFiltersSelect: (selectedFilters: { [key: string]: string[] }) => void;
 }
 
 export interface IFilter {
@@ -12,10 +13,14 @@ export interface IFilter {
   options: { text: string; value: string }[];
 }
 
-export default function Filters({ page }: FiltersProps) {
+export default function Filters({ page, onFiltersSelect }: FiltersProps) {
   const [filters, setFilters] = useState<IFilter[]>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState(null);
+
+  const [selectedFilters, setSelectedFilters] = useState<{
+    [key: string]: string[];
+  }>({});
 
   const fetchFilters = async () => {
     setIsLoading(true);
@@ -34,6 +39,7 @@ export default function Filters({ page }: FiltersProps) {
   useEffect(() => {
     fetchFilters();
   }, []);
+
   return (
     <>
       <div>
@@ -44,6 +50,18 @@ export default function Filters({ page }: FiltersProps) {
             placeholder=""
             selectionMode="multiple"
             key={filter?.value}
+            onSelectionChange={(selectedValue) => {
+              const selectedValueArray = Array.from(selectedValue) as string[];
+
+              setSelectedFilters((prev) => {
+                const updatedSelectedFilters = {
+                  ...prev,
+                  [filter?.value]: selectedValueArray,
+                };
+                onFiltersSelect(updatedSelectedFilters);
+                return updatedSelectedFilters;
+              });
+            }}
           >
             {(filter?.options ?? [])?.map((option) => (
               <SelectItem key={option?.value}>{option?.text}</SelectItem>

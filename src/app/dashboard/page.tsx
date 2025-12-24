@@ -115,7 +115,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-6 w-full max-w-7xl mx-auto">
+    <div className="p-24 w-full mx-auto min-h-screen">
       {/* Modal for adding folder */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange} placement="center">
         <ModalContent>

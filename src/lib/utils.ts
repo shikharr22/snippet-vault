@@ -54,3 +54,21 @@ export async function apiDelete(url: string) {
     throw error;
   }
 }
+
+/**method to add query params */
+export function addQueryParams(queryParams: {
+  [key: string]: string | string[] | number;
+}) {
+  let queryParamString = "";
+  Object.entries(queryParams).map(([paramName, paramValue]) => {
+    if (Array.isArray(paramValue)) {
+      paramValue?.forEach((value) => {
+        queryParamString += `&${paramName}=${encodeURIComponent(value)}`;
+      });
+    } else {
+      queryParamString += `&${paramName}=${encodeURIComponent(paramValue)}`;
+    }
+  });
+
+  return queryParamString.slice(1, -1);
+}

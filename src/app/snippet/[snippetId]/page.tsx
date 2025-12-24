@@ -1,12 +1,23 @@
 "use client";
-import { InputField } from "@/components/InputField";
-import { Textarea } from "@/components/Textarea";
 import { IFolder } from "@/models/Folder";
 import { ISnippet } from "@/models/Snippet";
 import { format } from "date-fns";
 import { usePathname, useRouter } from "next/navigation";
 import { apiPut } from "@/lib/utils";
 import { useEffect, useState } from "react";
+import { Edit, Save, Calendar, Plus } from "lucide-react";
+import {
+  Button,
+  Input,
+  Textarea,
+  Select,
+  SelectItem,
+  Chip,
+  Card,
+  CardBody,
+  CardHeader,
+  Spinner,
+} from "@heroui/react";
 
 export default function Snippet() {
   const pathname = usePathname();
@@ -16,6 +27,7 @@ export default function Snippet() {
   const [isReadOnly, setIsReadOnly] = useState(true);
   // Tag input state for editing tags
   const [tagInput, setTagInput] = useState("");
+  const [showTagsInput, setShowTagsInput] = useState(false);
 
   const router = useRouter();
 
@@ -61,207 +73,259 @@ export default function Snippet() {
     try {
       const snippetId = pathname?.split("/").pop() as string;
       await apiPut(`/api/snippet/${snippetId}`, snippet);
-      router.push("/dashboard");
       setIsReadOnly(true);
     } catch (error) {
       console.error("Failed to save snippet", error);
     }
   };
 
+  /**method to add tags */
+  const addTag = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (!showTagsInput) {
+      setShowTagsInput(true);
+    } else {
+      if (tagInput.trim() && !snippet?.tags?.includes(tagInput)) {
+        setSnippet({
+          ...snippet,
+          tags: [...(snippet.tags || []), tagInput.trim()],
+        } as ISnippet);
+        setTagInput("");
+      }
+      setShowTagsInput(false);
+    }
+  };
+
+  /**method to remove tags */
+  const removeTag = (tagToRemove: string) => {
+    const newTags = snippet?.tags?.filter((tag: string) => tag !== tagToRemove);
+    setSnippet({
+      ...snippet,
+      tags: newTags,
+    } as ISnippet);
+
+    if (newTags?.length === 0) {
+      setShowTagsInput(false);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-lg text-gray-700">Loading...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Spinner size="lg" color="primary" />
+          <p className="mt-4 text-lg text-gray-700">Loading snippet...</p>
+        </div>
       </div>
     );
   }
 
   if (!snippet.snippetId) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="text-lg text-gray-700">Snippet not found.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-gray-700">Snippet not found.</p>
+          <Button
+            color="primary"
+            variant="flat"
+            className="mt-4"
+            onPress={() => router.push("/dashboard")}
+          >
+            Back to Dashboard
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-[600]">
-      <div className="sticky top-0 z-10 p-4 flex justify-between items-center">
-        <span className="w-1/2">Snippet details</span>
-        <div className="flex justify-end items-center gap-2 w-full mt-4">
-          {/* Edit Button */}
-          <button
-            onClick={handleEdit}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            Edit
-          </button>
-          {/* Save Button */}
-          {!isReadOnly && (
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-            >
-              Save
-            </button>
-          )}
-        </div>
-      </div>
-      <div className="flex flex-col items-start justify-start flex-1 p-4 overflow-y-auto">
-        <div className="mb-3">
-          {/* Title */}
-          <label className="text-sm font-medium">Title</label>
-          <InputField
-            name="title"
-            type="text"
-            placeholder="Enter snippet title"
-            value={snippet?.title}
-            readOnly={isReadOnly}
-            onChange={(e) =>
-              setSnippet(
-                (prev: ISnippet) =>
-                  ({ ...prev, title: e.target.value } as ISnippet)
-              )
-            }
-            className="mt-1"
-          />
-        </div>
-        {/* Description */}
-        <div className="mb-3">
-          <label className="text-sm font-medium">Description</label>
-          <Textarea
-            name="description"
-            placeholder="Enter snippet description"
-            value={snippet?.description}
-            readOnly={isReadOnly}
-            onChange={(e) =>
-              setSnippet(
-                (prev: ISnippet) =>
-                  ({ ...prev, description: e.target.value } as ISnippet)
-              )
-            }
-            className="mt-1"
-          />
-        </div>
-        {/* Code Block */}
-        <div className="mb-3 w-full">
-          <label className="text-sm font-medium">Code</label>
-          <Textarea
-            name="code"
-            placeholder="Paste your code here"
-            value={snippet?.code}
-            readOnly={isReadOnly}
-            onChange={(e) =>
-              setSnippet(
-                (prev: ISnippet) =>
-                  ({ ...prev, code: e.target.value } as ISnippet)
-              )
-            }
-            className="mt-1 bg-gray-900 text-white font-mono"
-            rows={5}
-          />
-        </div>
-        {/* Tags */}
-        <div className="mb-3">
-          <label className="text-sm font-medium">Tags</label>
-          {/* Display Added Tags */}
-          <div className="flex flex-wrap gap-2 mt-2">
-            {snippet?.tags?.map((tag, index) => (
-              <span
-                key={index}
-                className="flex items-center bg-gray-200 px-2 py-1 rounded text-sm"
-              >
-                {tag}
-                {!isReadOnly && (
-                  <button
-                    type="button"
-                    className="ml-1 text-gray-600 hover:text-gray-800"
-                    onClick={() => {
-                      setSnippet({
-                        ...snippet,
-                        tags: snippet.tags.filter((t) => t !== tag),
-                      } as ISnippet);
-                    }}
-                  >
-                    &#10005;
-                  </button>
-                )}
-              </span>
-            ))}
-          </div>
-          {/* Add Tag Input */}
-          {!isReadOnly && (
-            <div className="flex items-end gap-2 mt-1">
-              <input
-                type="text"
-                placeholder="Enter tag"
-                className="flex-1 p-1 text-xs border rounded"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-              />
-              <button
-                type="button"
-                className="flex items-center px-2 py-1 border rounded text-xs bg-gray-100 hover:bg-gray-200"
-                onClick={() => {
-                  if (
-                    tagInput.trim() &&
-                    !snippet?.tags?.includes(tagInput.trim())
-                  ) {
-                    setSnippet({
-                      ...snippet,
-                      tags: [...snippet.tags, tagInput.trim()],
-                    } as ISnippet);
-                    setTagInput("");
-                  }
-                }}
-              >
-                Add tag
-              </button>
+    <div className="min-h-screen bg-gray-50 pt-20 pb-24 px-4">
+      <div className="max-w-2xl mx-auto">
+        <Card className="border-0 shadow-sm">
+          <CardHeader className="pb-4 flex justify-between">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Snippet Details
+              </h1>
+              <p className="text-gray-600">View and edit your code snippet</p>
             </div>
-          )}
-        </div>
+            <div className="flex gap-2">
+              {isReadOnly ? (
+                <Button
+                  color="primary"
+                  variant="flat"
+                  startContent={<Edit className="w-4 h-4" />}
+                  onPress={handleEdit}
+                >
+                  Edit
+                </Button>
+              ) : (
+                <Button
+                  className="bg-black text-white"
+                  startContent={<Save className="w-4 h-4" />}
+                  onPress={handleSave}
+                >
+                  Save
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-6">
+            {/* Title */}
+            <Input
+              label="Title"
+              placeholder="Enter snippet title"
+              variant="flat"
+              value={snippet?.title || ""}
+              isReadOnly={isReadOnly}
+              onChange={(e) =>
+                setSnippet(
+                  (prev: ISnippet) =>
+                    ({ ...prev, title: e.target.value } as ISnippet)
+                )
+              }
+            />
 
-        {/* Folder Select Dropdown */}
-        <div className="mb-3">
-          <label className="text-sm font-medium">Parent folder</label>
-          <select
-            name="folder"
-            value={snippet?.parentFolderId}
-            disabled={isReadOnly}
-            onChange={(e) =>
-              setSnippet(
-                (prev: ISnippet) =>
-                  ({ ...prev, parentFolderId: e.target.value } as ISnippet)
-              )
-            }
-            className="mt-1 px-2 py-1 border rounded w-full"
-          >
-            <option key="" value="">
-              Select folder
-            </option>
-            {foldersList?.map((folder) => (
-              <option key={folder?.folderId} value={folder?.folderId}>
-                {folder?.title}
-              </option>
-            ))}
+            {/* Description */}
+            <Textarea
+              label="Description"
+              placeholder="Enter snippet description"
+              variant="flat"
+              value={snippet?.description || ""}
+              isReadOnly={isReadOnly}
+              onChange={(e) =>
+                setSnippet(
+                  (prev: ISnippet) =>
+                    ({ ...prev, description: e.target.value } as ISnippet)
+                )
+              }
+              minRows={3}
+            />
 
-            {/* Add more folder options as needed */}
-          </select>
-        </div>
-        {/* <div className="mb-3">
-          <label className="text-sm font-medium">Created By</label>
-          <span className="flex flex-wrap gap-2 mt-2">
-            {" "}
-            {snippet.createdBy}
-          </span>
-        </div> */}
-        <div className="mb-3">
-          <label className="text-sm font-medium">Created on</label>
-          <span className="flex flex-wrap gap-2 mt-2">
-            {snippet.createdAt &&
-              format(new Date(snippet.createdAt), "MMMM dd, yyyy")}
-          </span>
-        </div>
+            {/* Code Block */}
+            <Textarea
+              label="Code"
+              placeholder="Paste your code here"
+              variant="flat"
+              value={snippet?.code || ""}
+              isReadOnly={isReadOnly}
+              onChange={(e) =>
+                setSnippet(
+                  (prev: ISnippet) =>
+                    ({ ...prev, code: e.target.value } as ISnippet)
+                )
+              }
+              classNames={{
+                input: "bg-gray-900 text-gray-100 font-mono text-sm",
+                inputWrapper: "bg-gray-900",
+              }}
+              minRows={8}
+            />
+
+            {/* Tags */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-700">Tags</label>
+
+              {/* Display Added Tags */}
+              {snippet?.tags && snippet.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {snippet.tags.map((tag: string, index: number) => (
+                    <Chip
+                      key={index}
+                      onClose={!isReadOnly ? () => removeTag(tag) : undefined}
+                      variant="flat"
+                      color="primary"
+                    >
+                      {tag}
+                    </Chip>
+                  ))}
+                </div>
+              )}
+
+              {/* Tag Input */}
+              {!isReadOnly && (
+                <div className="flex gap-2">
+                  {showTagsInput && (
+                    <Input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      placeholder="Enter tag"
+                      variant="flat"
+                      size="sm"
+                      className="flex-1"
+                    />
+                  )}
+                  <Button
+                    variant={showTagsInput ? "solid" : "flat"}
+                    color="primary"
+                    size="sm"
+                    startContent={<Plus className="w-4 h-4" />}
+                    onPress={addTag}
+                  >
+                    {showTagsInput ? "Add" : "Add Tag"}
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Parent Folder */}
+            <Select
+              label="Parent Folder"
+              placeholder="Select a folder"
+              variant="flat"
+              selectedKeys={
+                snippet?.parentFolderId ? [snippet.parentFolderId] : []
+              }
+              isDisabled={isReadOnly}
+              onSelectionChange={(keys) => {
+                const selectedKey = Array.from(keys)[0] as string;
+                setSnippet(
+                  (prev: ISnippet) =>
+                    ({ ...prev, parentFolderId: selectedKey } as ISnippet)
+                );
+              }}
+            >
+              {foldersList?.map((folder) => (
+                <SelectItem key={folder.folderId} value={folder.folderId}>
+                  {folder.title}
+                </SelectItem>
+              ))}
+            </Select>
+
+            {/* Metadata */}
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-gray-500" />
+                <label className="text-sm font-medium text-gray-700">
+                  Created on
+                </label>
+                <span className="text-sm text-gray-600">
+                  {snippet.createdAt &&
+                    format(new Date(snippet.createdAt), "MMMM dd, yyyy")}
+                </span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="light"
+                onPress={() => router.back()}
+                className="flex-1"
+              >
+                Back
+              </Button>
+              <Button
+                color="primary"
+                variant="flat"
+                onPress={() => router.push("/dashboard")}
+                className="flex-1"
+              >
+                Dashboard
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
       </div>
     </div>
   );
